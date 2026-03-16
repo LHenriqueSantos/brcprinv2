@@ -15,8 +15,14 @@ import Base from '../../../layouts/Base.astro';
   td { padding:0.875rem 1rem; border-bottom:1px solid var(--border); font-size:0.875rem; }
   tr:hover td { background:rgba(255,255,255,0.015); }
   .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
-  .stock-bar { height:6px; border-radius:3px; background:rgba(255,255,255,0.08); }
+  .btn { padding:0.65rem 1.25rem; border:1px solid; border-radius:2px; font-size:0.75rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; background:transparent; transition:all 0.15s; }
+  .btn-sm { padding:0.3rem 0.7rem; border-radius:2px; font-size:0.7rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; border:1px solid; background:transparent; transition:all 0.15s; }
+  .input-field { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.65rem 0.875rem; color:#fff; font-family:'Inter',sans-serif; font-size:0.85rem; width:100%; box-sizing:border-box; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  label.lbl { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .stock-bar { height:6px; border-radius:3px; background:rgba(255,255,255,0.08); margin-top:0.3rem; }
   .stock-fill { height:6px; border-radius:3px; }
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:999; align-items:flex-start; justify-content:center; padding-top:6vh; }
 </style>
 
 <div class="layout">
@@ -43,59 +49,171 @@ import Base from '../../../layouts/Base.astro';
   <main class="main">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
       <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Filamentos</h1>
-      <a href="/admin/filamentos/novo" style="padding:0.65rem 1.25rem;border:1px solid rgba(0,242,255,0.4);color:var(--accent);text-decoration:none;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:2px;">+ NOVO FILAMENTO</a>
+      <button class="btn" id="btn-add" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">+ NOVO FILAMENTO</button>
     </div>
+    <div id="success-msg" style="display:none;padding:0.875rem 1.25rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;margin-bottom:1.5rem;font-weight:700;"></div>
     <div class="card-wrap">
       <table>
         <thead>
-          <tr><th>Cor</th><th>Nome/Marca</th><th>Tipo</th><th>Custo/kg</th><th>Estoque</th><th>Min. Estoque</th></tr>
+          <tr><th>Cor</th><th>Nome / Marca</th><th>Tipo</th><th>Custo/kg</th><th>Estoque</th><th>Status</th><th>Ações</th></tr>
         </thead>
         <tbody id="filaments-tbody">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:3rem;">Carregando...</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:3rem;">Carregando...</td></tr>
         </tbody>
       </table>
     </div>
   </main>
 </div>
 
+<!-- Add/Edit Filament Modal -->
+<div class="modal-bg" id="filament-modal">
+  <div style="background:#070810;border:1px solid var(--border);border-radius:4px;padding:2rem;width:480px;max-width:94vw;max-height:86vh;overflow-y:auto;">
+    <h3 id="modal-title" style="font-size:0.85rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:0 0 1.5rem;">Novo Filamento</h3>
+    <input type="hidden" id="edit-id" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="grid-column:1/-1;"><label class="lbl">Nome *</label><input class="input-field" id="f-name" placeholder="PLA Branco 1kg" /></div>
+      <div><label class="lbl">Marca</label><input class="input-field" id="f-brand" placeholder="Bambu, Sunlu..." /></div>
+      <div>
+        <label class="lbl">Tipo *</label>
+        <select class="input-field" id="f-type">
+          <option value="PLA">PLA</option>
+          <option value="ABS">ABS</option>
+          <option value="PETG">PETG</option>
+          <option value="TPU">TPU</option>
+          <option value="ASA">ASA</option>
+          <option value="PLA+">PLA+</option>
+          <option value="RESIN">Resina</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Cor (hex)</label>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <input type="color" id="f-color-picker" value="#ffffff" style="width:40px;height:36px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;padding:2px;" />
+          <input class="input-field" id="f-color" placeholder="#ff0000" style="flex:1;" />
+        </div>
+      </div>
+      <div><label class="lbl">Custo/kg (R$) *</label><input class="input-field" type="number" id="f-cost" step="0.01" /></div>
+      <div><label class="lbl">Densidade (g/cm³)</label><input class="input-field" type="number" id="f-density" value="1.24" step="0.01" /></div>
+      <div><label class="lbl">Peso inicial (g)</label><input class="input-field" type="number" id="f-weight" value="1000" /></div>
+      <div><label class="lbl">Alerta estoque (g)</label><input class="input-field" type="number" id="f-min" value="100" /></div>
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+      <button class="btn" id="modal-cancel" style="color:var(--muted);border-color:var(--border);">CANCELAR</button>
+      <button class="btn" id="modal-save" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">SALVAR</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` }; }
+  function headers(json = false) {
+    const h: Record<string, string> = { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` };
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
 
   async function loadFilaments() {
     if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
     const tbody = document.getElementById('filaments-tbody') as HTMLTableSectionElement;
     try {
-      const res = await fetch('/api/v1/filaments', { headers: headers() });
+      const res = await fetch('/api/v1/filaments?active_only=false', { headers: headers() });
       if (res.status === 401) { window.location.href = '/admin/login'; return; }
-      const data = await res.json();
-      const filaments = data.items || data || [];
-      if (filaments.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">Nenhum filamento cadastrado.</td></tr>'; return; }
+      const filaments = await res.json();
+      if (!filaments?.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">Nenhum filamento cadastrado.</td></tr>'; return; }
       tbody.innerHTML = filaments.map((f: any) => {
-        const stock = Number(f.stock_g || 0);
-        const minStock = Number(f.min_stock_g || 500);
+        const stock = Number(f.current_weight_g || 0);
+        const minStock = Number(f.min_stock_warning || 100);
         const pct = Math.min(100, Math.round((stock / (minStock * 4)) * 100));
-        const stockColor = stock < minStock ? '#ef4444' : stock < minStock * 2 ? '#f59e0b' : '#22c55e';
-        const color = f.color_hex || f.hex_color || '#888';
+        const stockColor = !f.active ? '#6b7280' : stock < minStock ? '#ef4444' : stock < minStock * 2 ? '#f59e0b' : '#22c55e';
+        const color = f.color || '#888';
+        const statusBadge = f.active
+          ? `<span style="font-size:0.7rem;font-weight:700;color:#22c55e;">● Ativo</span>`
+          : `<span style="font-size:0.7rem;font-weight:700;color:#6b7280;">● Inativo</span>`;
         return `<tr>
           <td>
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <div style="width:28px;height:28px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
-              <span style="font-size:0.75rem;color:var(--muted);">${color}</span>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+              <div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
             </div>
           </td>
-          <td><div style="font-weight:700;">${f.name || f.brand || '—'}</div></td>
-          <td><span style="font-size:0.75rem;background:rgba(0,242,255,0.08);color:var(--accent);padding:0.2rem 0.6rem;border-radius:2px;">${f.material_type || f.type || 'PLA'}</span></td>
-          <td>R$ ${f.cost_per_kg ? Number(f.cost_per_kg).toFixed(2).replace('.',',') : '—'}</td>
+          <td><div style="font-weight:700;">${f.name}</div><div style="font-size:0.75rem;color:var(--muted);">${f.brand || ''}</div></td>
+          <td><span style="font-size:0.75rem;background:rgba(0,242,255,0.08);color:var(--accent);padding:0.2rem 0.6rem;border-radius:2px;">${f.type}</span></td>
+          <td>R$ ${Number(f.cost_per_kg).toFixed(2).replace('.',',')}</td>
           <td>
-            <div style="font-size:0.8rem;font-weight:700;color:${stockColor};margin-bottom:0.4rem;">${stock.toFixed(0)}g</div>
+            <div style="font-size:0.8rem;font-weight:700;color:${stockColor};">${stock.toFixed(0)}g</div>
             <div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${stockColor};"></div></div>
+            <div style="font-size:0.7rem;color:var(--muted);">min: ${minStock}g</div>
           </td>
-          <td style="color:var(--muted);font-size:0.85rem;">${minStock.toFixed(0)}g</td>
+          <td>${statusBadge}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-sm edit-btn" data-id="${f.id}" data-name="${f.name}" data-brand="${f.brand||''}" data-type="${f.type}" data-color="${color}" data-cost="${f.cost_per_kg}" data-density="${f.density_g_cm3||1.24}" data-weight="${f.current_weight_g}" data-min="${f.min_stock_warning}" style="color:var(--accent);border-color:rgba(0,242,255,0.3);">EDITAR</button>
+          </td>
         </tr>`;
       }).join('');
-    } catch { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#f87171;padding:2rem;">Erro ao carregar filamentos.</td></tr>'; }
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const d = (btn as HTMLElement).dataset;
+          (document.getElementById('modal-title') as HTMLElement).textContent = 'Editar Filamento';
+          (document.getElementById('edit-id') as HTMLInputElement).value = d.id || '';
+          (document.getElementById('f-name') as HTMLInputElement).value = d.name || '';
+          (document.getElementById('f-brand') as HTMLInputElement).value = d.brand || '';
+          (document.getElementById('f-type') as HTMLSelectElement).value = d.type || 'PLA';
+          (document.getElementById('f-color') as HTMLInputElement).value = d.color || '#888';
+          (document.getElementById('f-color-picker') as HTMLInputElement).value = d.color || '#888';
+          (document.getElementById('f-cost') as HTMLInputElement).value = d.cost || '';
+          (document.getElementById('f-density') as HTMLInputElement).value = d.density || '1.24';
+          (document.getElementById('f-weight') as HTMLInputElement).value = d.weight || '1000';
+          (document.getElementById('f-min') as HTMLInputElement).value = d.min || '100';
+          (document.getElementById('filament-modal') as HTMLElement).style.display = 'flex';
+        });
+      });
+    } catch { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#f87171;padding:2rem;">Erro ao carregar.</td></tr>'; }
   }
 
+  document.getElementById('f-color-picker')?.addEventListener('input', (e) => {
+    (document.getElementById('f-color') as HTMLInputElement).value = (e.target as HTMLInputElement).value;
+  });
+  document.getElementById('f-color')?.addEventListener('input', (e) => {
+    const val = (e.target as HTMLInputElement).value;
+    if (/^#[0-9a-f]{6}$/i.test(val)) (document.getElementById('f-color-picker') as HTMLInputElement).value = val;
+  });
+
+  document.getElementById('btn-add')?.addEventListener('click', () => {
+    (document.getElementById('modal-title') as HTMLElement).textContent = 'Novo Filamento';
+    (document.getElementById('edit-id') as HTMLInputElement).value = '';
+    ['f-name','f-brand','f-cost'].forEach(id => (document.getElementById(id) as HTMLInputElement).value = '');
+    (document.getElementById('f-color') as HTMLInputElement).value = '#ffffff';
+    (document.getElementById('f-color-picker') as HTMLInputElement).value = '#ffffff';
+    (document.getElementById('f-weight') as HTMLInputElement).value = '1000';
+    (document.getElementById('f-min') as HTMLInputElement).value = '100';
+    (document.getElementById('filament-modal') as HTMLElement).style.display = 'flex';
+  });
+
+  document.getElementById('modal-cancel')?.addEventListener('click', () => { (document.getElementById('filament-modal') as HTMLElement).style.display = 'none'; });
+
+  document.getElementById('modal-save')?.addEventListener('click', async () => {
+    const editId = (document.getElementById('edit-id') as HTMLInputElement).value;
+    const body: any = {
+      name: (document.getElementById('f-name') as HTMLInputElement).value,
+      brand: (document.getElementById('f-brand') as HTMLInputElement).value || null,
+      type: (document.getElementById('f-type') as HTMLSelectElement).value,
+      color: (document.getElementById('f-color') as HTMLInputElement).value || null,
+      cost_per_kg: parseFloat((document.getElementById('f-cost') as HTMLInputElement).value),
+      density_g_cm3: parseFloat((document.getElementById('f-density') as HTMLInputElement).value) || 1.24,
+      initial_weight_g: parseFloat((document.getElementById('f-weight') as HTMLInputElement).value) || 1000,
+      min_stock_warning: parseFloat((document.getElementById('f-min') as HTMLInputElement).value) || 100,
+    };
+    if (!body.name || !body.cost_per_kg) { alert('Nome e custo/kg são obrigatórios.'); return; }
+    const url = editId ? `/api/v1/filaments/${editId}` : '/api/v1/filaments';
+    const method = editId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: headers(true) as HeadersInit, body: JSON.stringify(body) });
+    if (res.ok) { (document.getElementById('filament-modal') as HTMLElement).style.display = 'none'; showMsg(editId ? 'Filamento atualizado!' : 'Filamento criado!'); loadFilaments(); }
+    else { const e = await res.json(); alert(e.detail || 'Erro ao salvar.'); }
+  });
+
+  function showMsg(msg: string) {
+    const el = document.getElementById('success-msg') as HTMLElement;
+    el.textContent = '✅ ' + msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
   document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
   loadFilaments();
 </script>

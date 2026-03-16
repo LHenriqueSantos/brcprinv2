@@ -19,20 +19,38 @@ router = APIRouter()
 
 
 class QuoteOut(BaseModel):
-    id: int
-    public_token: Optional[str]
-    title: Optional[str]
-    status: str
-    final_price: float
-    quantity: int
-    print_time_hours: float
-    filament_used_g: float
-    is_multicolor: bool
-    request_type: str
-    created_at: str
+    model_config = {"from_attributes": True, "arbitrary_types_allowed": True}
 
-    class Config:
-        from_attributes = True
+    id: int
+    public_token: Optional[str] = None
+    title: Optional[str] = None
+    client_name: Optional[str] = None
+    client_email: Optional[str] = None
+    status: str
+    final_price: Optional[float] = None
+    quantity: Optional[int] = 1
+    print_time_hours: Optional[float] = None
+    filament_used_g: Optional[float] = None
+    is_multicolor: Optional[bool] = False
+    request_type: Optional[str] = "stl"
+    is_paid: Optional[bool] = False
+    created_at: Optional[str] = None
+
+    @classmethod
+    def model_validate(cls, obj, *args, **kwargs):
+        """Override to handle Decimal/datetime -> Python native types."""
+        from decimal import Decimal
+        from datetime import datetime
+
+        d = {}
+        for field in cls.model_fields:
+            val = getattr(obj, field, None)
+            if isinstance(val, Decimal):
+                val = float(val)
+            elif isinstance(val, datetime):
+                val = val.isoformat()
+            d[field] = val
+        return cls(**d)
 
 
 @router.get("/", response_model=dict)

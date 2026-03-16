@@ -3,19 +3,26 @@ import Base from '../../../layouts/Base.astro';
 ---
 <Base title="Impressoras — Admin BRCPrint" showNav={false}>
 <style>
-  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
   body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
   .layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
   .sidebar { background:#070810; border-right:1px solid var(--border); padding:1.5rem 1rem; }
   .main { padding:2rem 2.5rem; }
   .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
   .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.25rem; }
   .printer-card { background:#070810; border:1px solid var(--border); border-radius:4px; padding:1.5rem; transition:border-color 0.2s; }
   .printer-card:hover { border-color:rgba(0,242,255,0.3); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.25rem; }
-  .stat-row { display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.8rem; }
+  .stat-row { display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0; border-bottom:1px solid var(--border); font-size:0.8rem; }
   .stat-row:last-child { border:none; }
   .badge { padding:0.2rem 0.6rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
+  .btn { padding:0.65rem 1.25rem; border:1px solid; border-radius:2px; font-size:0.75rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; background:transparent; transition:all 0.15s; }
+  .btn-sm { padding:0.3rem 0.7rem; border-radius:2px; font-size:0.7rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; border:1px solid; background:transparent; transition:all 0.15s; }
+  .input-field { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.65rem 0.875rem; color:#fff; font-family:'Inter',sans-serif; font-size:0.85rem; width:100%; box-sizing:border-box; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  label.lbl { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:999; align-items:flex-start; justify-content:center; padding-top:4vh; }
+  select.input-field option { background:#070810; }
 </style>
 
 <div class="layout">
@@ -42,53 +49,129 @@ import Base from '../../../layouts/Base.astro';
   <main class="main">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
       <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Impressoras <span style="color:var(--accent);">3D</span></h1>
-      <a href="/admin/impressoras/nova" style="padding:0.65rem 1.25rem;border:1px solid rgba(0,242,255,0.4);color:var(--accent);text-decoration:none;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:2px;transition:all 0.15s;">+ NOVA IMPRESSORA</a>
+      <button class="btn" id="btn-add" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">+ NOVA IMPRESSORA</button>
     </div>
+    <div id="success-msg" style="display:none;padding:0.875rem 1.25rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;margin-bottom:1.5rem;font-weight:700;"></div>
     <div class="grid" id="printers-grid">
       <div style="text-align:center;padding:4rem;color:var(--muted);">Carregando...</div>
     </div>
   </main>
 </div>
 
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="printer-modal">
+  <div style="background:#070810;border:1px solid var(--border);border-radius:4px;padding:2rem;width:520px;max-width:94vw;max-height:86vh;overflow-y:auto;">
+    <h3 id="modal-title" style="font-size:0.85rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:0 0 1.5rem;">Nova Impressora</h3>
+    <input type="hidden" id="edit-id" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="grid-column:1/-1;"><label class="lbl">Nome *</label><input class="input-field" id="f-name" /></div>
+      <div><label class="lbl">Modelo</label><input class="input-field" id="f-model" /></div>
+      <div>
+        <label class="lbl">Tipo</label>
+        <select class="input-field" id="f-type"><option value="FDM">FDM</option><option value="MSLA">MSLA/Resina</option><option value="SLA">SLA</option></select>
+      </div>
+      <div><label class="lbl">Potência (W) *</label><input class="input-field" type="number" id="f-power" /></div>
+      <div><label class="lbl">Preço Compra (R$) *</label><input class="input-field" type="number" id="f-price" step="0.01" /></div>
+      <div><label class="lbl">Vida útil (horas)</label><input class="input-field" type="number" id="f-lifespan" value="2000" /></div>
+      <div><label class="lbl">Reserva manutenção (%)</label><input class="input-field" type="number" id="f-maint-pct" value="5" step="0.1" /></div>
+      <div>
+        <label class="lbl">API Tipo</label>
+        <select class="input-field" id="f-api"><option value="none">Nenhuma</option><option value="bambu">Bambu</option><option value="octoprint">OctoPrint</option></select>
+      </div>
+      <div><label class="lbl">IP Address</label><input class="input-field" id="f-ip" placeholder="192.168.1.x" /></div>
+      <div><label class="lbl">API Key</label><input class="input-field" id="f-apikey" placeholder="..." /></div>
+      <div style="grid-column:1/-1;"><label class="lbl">Serial (Bambu)</label><input class="input-field" id="f-serial" /></div>
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+      <button class="btn" id="modal-cancel" style="color:var(--muted);border-color:var(--border);">CANCELAR</button>
+      <button class="btn" id="modal-save" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">SALVAR</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` }; }
+  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}`, 'Content-Type': 'application/json' }; }
 
   async function loadPrinters() {
     if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
     const grid = document.getElementById('printers-grid') as HTMLElement;
     try {
-      const res = await fetch('/api/v1/printers', { headers: headers() });
+      const res = await fetch('/api/v1/printers', { headers: { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` } as HeadersInit });
       if (res.status === 401) { window.location.href = '/admin/login'; return; }
-      const data = await res.json();
-      const printers = data.items || data || [];
-      if (printers.length === 0) {
-        grid.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--muted);">Nenhuma impressora cadastrada.</div>';
-        return;
-      }
+      const printers = await res.json();
+      if (!printers?.length) { grid.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--muted);">Nenhuma impressora cadastrada.</div>'; return; }
       grid.innerHTML = printers.map((p: any) => {
-        const statusColor = p.status === 'active' || p.is_active ? '#22c55e' : p.status === 'printing' ? '#8b5cf6' : '#6b7280';
-        const statusLabel = p.status === 'active' ? 'Ativa' : p.status === 'printing' ? 'Imprimindo' : p.status === 'maintenance' ? 'Manutenção' : p.status || (p.is_active ? 'Ativa' : 'Inativa');
-        return `
-          <div class="printer-card">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
-              <div>
-                <div style="font-size:1.5rem;">🖨️</div>
-                <div style="font-weight:900;font-size:0.95rem;margin-top:0.4rem;">${p.name}</div>
-                <div style="font-size:0.75rem;color:var(--muted);">${p.model || p.brand || ''}</div>
-              </div>
-              <span class="badge" style="background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">${statusLabel}</span>
+        const online = p.is_online;
+        const sColor = online ? '#22c55e' : '#6b7280';
+        const sLabel = online ? 'Online' : 'Offline';
+        return `<div class="printer-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+            <div>
+              <div style="font-size:1.5rem;">🖨️</div>
+              <div style="font-weight:900;font-size:0.95rem;margin-top:0.4rem;">${p.name}</div>
+              <div style="font-size:0.75rem;color:var(--muted);">${p.type} · ${p.model || '—'}</div>
             </div>
-            <div style="border-top:1px solid var(--border);padding-top:1rem;">
-              <div class="stat-row"><span style="color:var(--muted);">Potência</span><span>${p.power_watts || p.printer_power_watts || '—'} W</span></div>
-              <div class="stat-row"><span style="color:var(--muted);">Custo/hora</span><span>${p.cost_per_hour ? `R$ ${Number(p.cost_per_hour).toFixed(2).replace('.',',')}` : '—'}</span></div>
-              <div class="stat-row"><span style="color:var(--muted);">Volume (mm³)</span><span>${p.build_volume_x ? `${p.build_volume_x}×${p.build_volume_y}×${p.build_volume_z}` : '—'}</span></div>
-            </div>
+            <span class="badge" style="background:${sColor}22;color:${sColor};border:1px solid ${sColor}44;">${sLabel}</span>
           </div>
-        `;
+          <div style="border-top:1px solid var(--border);padding-top:0.875rem;margin-bottom:1rem;">
+            <div class="stat-row"><span style="color:var(--muted);">Horas impressas</span><span>${p.current_hours_printed?.toFixed(1) || 0}h</span></div>
+            <div class="stat-row"><span style="color:var(--muted);">Alerta manutenção</span><span>${p.maintenance_alert_threshold}h</span></div>
+            <div class="stat-row"><span style="color:var(--muted);">API</span><span>${p.api_type}</span></div>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn-sm edit-btn" data-id="${p.id}" style="color:var(--accent);border-color:rgba(0,242,255,0.3);">EDITAR</button>
+            <button class="btn-sm del-btn" data-id="${p.id}" style="color:#f87171;border-color:rgba(239,68,68,0.3);">DESATIVAR</button>
+          </div>
+        </div>`;
       }).join('');
-    } catch { grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#f87171;">Erro ao carregar impressoras.</div>'; }
+      document.querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('Desativar impressora?')) return;
+        await fetch(`/api/v1/printers/${(btn as HTMLElement).dataset.id}`, { method: 'DELETE', headers: headers() as HeadersInit });
+        showMsg('Impressora desativada!'); loadPrinters();
+      }));
+      document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openModal(Number((btn as HTMLElement).dataset.id))));
+    } catch { grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#f87171;">Erro ao carregar.</div>'; }
   }
 
+  function openModal(editId?: number) {
+    const isEdit = !!editId;
+    (document.getElementById('modal-title') as HTMLElement).textContent = isEdit ? 'Editar Impressora' : 'Nova Impressora';
+    (document.getElementById('edit-id') as HTMLInputElement).value = editId ? String(editId) : '';
+    if (!isEdit) ['f-name','f-model','f-power','f-price','f-ip','f-apikey','f-serial'].forEach(id => (document.getElementById(id) as HTMLInputElement).value = '');
+    (document.getElementById('printer-modal') as HTMLElement).style.display = 'flex';
+  }
+
+  document.getElementById('btn-add')?.addEventListener('click', () => openModal());
+  document.getElementById('modal-cancel')?.addEventListener('click', () => { (document.getElementById('printer-modal') as HTMLElement).style.display = 'none'; });
+
+  document.getElementById('modal-save')?.addEventListener('click', async () => {
+    const editId = (document.getElementById('edit-id') as HTMLInputElement).value;
+    const body = {
+      name: (document.getElementById('f-name') as HTMLInputElement).value,
+      model: (document.getElementById('f-model') as HTMLInputElement).value || null,
+      type: (document.getElementById('f-type') as HTMLSelectElement).value,
+      power_watts: parseFloat((document.getElementById('f-power') as HTMLInputElement).value) || 0,
+      purchase_price: parseFloat((document.getElementById('f-price') as HTMLInputElement).value) || 0,
+      lifespan_hours: parseInt((document.getElementById('f-lifespan') as HTMLInputElement).value) || 2000,
+      maintenance_reserve_pct: parseFloat((document.getElementById('f-maint-pct') as HTMLInputElement).value) || 5,
+      api_type: (document.getElementById('f-api') as HTMLSelectElement).value,
+      ip_address: (document.getElementById('f-ip') as HTMLInputElement).value || null,
+      api_key: (document.getElementById('f-apikey') as HTMLInputElement).value || null,
+      device_serial: (document.getElementById('f-serial') as HTMLInputElement).value || null,
+    };
+    if (!body.name) { alert('Nome é obrigatório.'); return; }
+    const url = editId ? `/api/v1/printers/${editId}` : '/api/v1/printers';
+    const method = editId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: headers() as HeadersInit, body: JSON.stringify(body) });
+    if (res.ok) { (document.getElementById('printer-modal') as HTMLElement).style.display = 'none'; showMsg(editId ? 'Impressora atualizada!' : 'Impressora criada!'); loadPrinters(); }
+    else { const e = await res.json(); alert(e.detail || 'Erro ao salvar.'); }
+  });
+
+  function showMsg(msg: string) {
+    const el = document.getElementById('success-msg') as HTMLElement;
+    el.textContent = '✅ ' + msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
   document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
   loadPrinters();
 </script>

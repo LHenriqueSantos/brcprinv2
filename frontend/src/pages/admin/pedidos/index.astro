@@ -1,0 +1,269 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Pedidos — Admin BRCPrint" showNav={false}>
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .sidebar { background:#070810; border-right:1px solid var(--border); padding:1.5rem 1rem; }
+  .main { padding:2rem 2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:0.875rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:0.875rem 1rem; border-bottom:1px solid var(--border); font-size:0.875rem; vertical-align:middle; }
+  tr:hover td { background:rgba(255,255,255,0.015); }
+  .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .badge { padding:0.2rem 0.65rem; border-radius:999px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+  .btn-sm { padding:0.3rem 0.75rem; border-radius:2px; font-size:0.7rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; border:1px solid; background:transparent; transition:all 0.15s; }
+  .input-field { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.5rem 0.875rem; color:#fff; font-family:'Inter',sans-serif; font-size:0.85rem; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  select.input-field option { background:#070810; }
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:999; align-items:flex-start; justify-content:center; padding-top:5vh; }
+  label.lbl { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .btn { padding:0.65rem 1.25rem; border:1px solid; border-radius:2px; font-size:0.75rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; background:transparent; transition:all 0.15s; }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:30px;" onerror="this.style.display='none'" />
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-top:0.5rem;">PAINEL ADMIN</div>
+    </div>
+    <nav>
+      <a href="/admin" class="nav-item">📊 Dashboard</a>
+      <a href="/admin/cotacoes" class="nav-item">💰 Cotações</a>
+      <a href="/admin/pedidos" class="nav-item active">📦 Pedidos</a>
+      <a href="/admin/clientes" class="nav-item">👤 Clientes</a>
+      <a href="/admin/catalogo" class="nav-item">🧊 Catálogo</a>
+      <a href="/admin/impressoras" class="nav-item">🖨️ Impressoras</a>
+      <a href="/admin/filamentos" class="nav-item">🧵 Filamentos</a>
+      <a href="/admin/leiloes" class="nav-item">⚡ Leilões</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+      <button id="btn-logout" style="width:100%;padding:0.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border-radius:2px;text-transform:uppercase;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+      <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Pedidos</h1>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <input class="input-field" type="search" id="search-input" placeholder="Buscar nome/email/token..." style="width:240px;" />
+        <select class="input-field" id="status-filter" style="width:160px;">
+          <option value="">Todos os status</option>
+          <option value="pending_payment">Aguardando Pag.</option>
+          <option value="paid">Pago</option>
+          <option value="processing">Em Produção</option>
+          <option value="shipped">Enviado</option>
+          <option value="delivered">Entregue</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="success-msg" style="display:none;padding:0.875rem 1.25rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;margin-bottom:1.5rem;font-weight:700;"></div>
+
+    <div class="card-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Cliente</th><th>Status</th><th>Total</th><th>Entrega</th><th>Data</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:3rem;">Carregando...</td></tr>
+        </tbody>
+      </table>
+      <div id="pagination" style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:none;align-items:center;justify-content:space-between;">
+        <span id="page-info" style="font-size:0.8rem;color:var(--muted);"></span>
+        <div style="display:flex;gap:0.5rem;">
+          <button id="prev-btn" class="btn-sm" style="color:var(--muted);border-color:var(--border);" disabled>← PREV</button>
+          <button id="next-btn" class="btn-sm" style="color:var(--accent);border-color:rgba(0,242,255,0.3);">NEXT →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Order Detail / Status Modal -->
+<div class="modal-bg" id="order-modal">
+  <div style="background:#070810;border:1px solid var(--border);border-radius:4px;padding:2rem;width:580px;max-width:94vw;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h3 id="modal-order-id" style="font-size:0.85rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:0;">Pedido #</h3>
+      <button id="modal-close" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+
+    <!-- Info Grid -->
+    <div id="order-info" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;"></div>
+
+    <!-- Items -->
+    <div style="margin-bottom:1.5rem;">
+      <h4 style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:0.75rem;">Itens</h4>
+      <div id="order-items"></div>
+    </div>
+
+    <!-- Status Update -->
+    <div style="border-top:1px solid var(--border);padding-top:1.25rem;">
+      <h4 style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:0.875rem;">Atualizar Status</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+        <div>
+          <label class="lbl">Novo Status</label>
+          <select class="input-field" id="new-status" style="width:100%;">
+            <option value="pending_payment">Aguardando Pagamento</option>
+            <option value="paid">Pago</option>
+            <option value="processing">Em Produção</option>
+            <option value="shipped">Enviado</option>
+            <option value="delivered">Entregue</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Código Rastreio</label>
+          <input class="input-field" id="tracking-code" placeholder="AA000000000BR" style="width:100%;" />
+        </div>
+      </div>
+      <button class="btn" id="btn-update-status" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">SALVAR ALTERAÇÃO</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let page = 1, totalPages = 1, totalItems = 0;
+  let currentOrderId: number | null = null;
+  let debounce: any;
+
+  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` }; }
+
+  const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+    pending_payment: { label: 'Aguardando Pag.', color: '#f59e0b' },
+    paid:            { label: 'Pago',            color: '#3b82f6' },
+    processing:      { label: 'Em Produção',     color: '#8b5cf6' },
+    shipped:         { label: 'Enviado',          color: '#06b6d4' },
+    delivered:       { label: 'Entregue',         color: '#22c55e' },
+    cancelled:       { label: 'Cancelado',        color: '#ef4444' },
+  };
+
+  function statusBadge(status: string) {
+    const s = STATUS_CONFIG[status] || { label: status, color: '#6b7280' };
+    return `<span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span>`;
+  }
+
+  async function loadOrders() {
+    if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
+    const search = (document.getElementById('search-input') as HTMLInputElement).value;
+    const status = (document.getElementById('status-filter') as HTMLSelectElement).value;
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (search) params.set('search', search);
+    if (status) params.set('status', status);
+    const tbody = document.getElementById('orders-tbody') as HTMLTableSectionElement;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">Carregando...</td></tr>';
+    try {
+      const res = await fetch(`/api/v1/orders?${params}`, { headers: headers() as HeadersInit });
+      if (res.status === 401) { window.location.href = '/admin/login'; return; }
+      const data = await res.json();
+      const orders = data.items || [];
+      totalPages = data.pages || 1; totalItems = data.total || 0;
+      (document.getElementById('page-info') as HTMLElement).textContent = `${totalItems} pedidos · Página ${page} de ${totalPages}`;
+      (document.getElementById('pagination') as HTMLElement).style.display = 'flex';
+      (document.getElementById('prev-btn') as HTMLButtonElement).disabled = page <= 1;
+      (document.getElementById('next-btn') as HTMLButtonElement).disabled = page >= totalPages;
+      if (!orders.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">Nenhum pedido encontrado.</td></tr>'; return; }
+      tbody.innerHTML = orders.map((o: any) => {
+        const total = `R$ ${Number(o.total).toFixed(2).replace('.',',')}`;
+        const delivery = o.delivery_method === 'pickup' ? '🏪 Retirada' : '📬 Entrega';
+        const date = o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '—';
+        return `<tr>
+          <td style="color:var(--muted);font-size:0.8rem;">#${o.id}</td>
+          <td><div style="font-weight:700;">${o.client_name || '—'}</div><div style="font-size:0.75rem;color:var(--muted);">${o.client_email || ''}</div></td>
+          <td>${statusBadge(o.status)}</td>
+          <td style="font-weight:700;">${total}</td>
+          <td style="font-size:0.8rem;color:var(--muted);">${delivery}</td>
+          <td style="font-size:0.8rem;color:var(--muted);">${date}</td>
+          <td><button class="btn-sm detail-btn" data-id="${o.id}" data-status="${o.status}" data-tracking="${o.shipping_tracking_code || ''}" style="color:var(--accent);border-color:rgba(0,242,255,0.3);">VER</button></td>
+        </tr>`;
+      }).join('');
+
+      document.querySelectorAll('.detail-btn').forEach(btn => btn.addEventListener('click', () => openDetail(Number((btn as HTMLElement).dataset.id))));
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#f87171;padding:2rem;">Erro ao carregar pedidos.</td></tr>'; }
+  }
+
+  async function openDetail(id: number) {
+    currentOrderId = id;
+    (document.getElementById('modal-order-id') as HTMLElement).textContent = `Pedido #${id}`;
+    (document.getElementById('order-modal') as HTMLElement).style.display = 'flex';
+    (document.getElementById('order-info') as HTMLElement).innerHTML = '<div style="color:var(--muted);grid-column:1/-1;text-align:center;padding:1rem;">Carregando...</div>';
+    (document.getElementById('order-items') as HTMLElement).innerHTML = '';
+    try {
+      const res = await fetch(`/api/v1/orders/${id}`, { headers: headers() as HeadersInit });
+      const o = await res.json();
+      (document.getElementById('new-status') as HTMLSelectElement).value = o.status;
+      (document.getElementById('tracking-code') as HTMLInputElement).value = o.shipping_tracking_code || '';
+      const info = [
+        ['Cliente', o.client_name || '—'],
+        ['E-mail', o.client_email || '—'],
+        ['Telefone', o.client_phone || '—'],
+        ['Status', `<span style="font-weight:900;color:${(STATUS_CONFIG[o.status]||{color:'#fff'}).color};">${(STATUS_CONFIG[o.status]||{label:o.status}).label}</span>`],
+        ['Total', `<strong>R$ ${Number(o.total).toFixed(2).replace('.',',')}</strong>`],
+        ['Subtotal', `R$ ${Number(o.subtotal).toFixed(2).replace('.',',')}`],
+        ['Frete', `R$ ${Number(o.shipping_cost).toFixed(2).replace('.',',')}`],
+        ['Desconto', `R$ ${Number(o.discount_value).toFixed(2).replace('.',',')}`],
+        ['Entrega', o.delivery_method === 'pickup' ? '🏪 Retirada' : '📬 ' + (o.shipping_service || 'Entrega')],
+        ['Rastreio', o.shipping_tracking_code || '—'],
+        ['Endereço', o.client_address ? `${o.client_address}${o.client_number?', '+o.client_number:''} — ${o.client_city}/${o.client_state}` : '—'],
+        ['Pag. Status', o.mp_status || '—'],
+      ];
+      (document.getElementById('order-info') as HTMLElement).innerHTML = info.map(([k,v]) => `
+        <div style="background:rgba(255,255,255,0.02);border-radius:3px;padding:0.5rem 0.75rem;">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:0.2rem;">${k}</div>
+          <div style="font-size:0.85rem;">${v}</div>
+        </div>
+      `).join('');
+      const items = o.items || [];
+      (document.getElementById('order-items') as HTMLElement).innerHTML = items.length ? items.map((i: any) => `
+        <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+          <span>${i.quantity}× ${i.title}${i.color?' ('+i.color+')':''}</span>
+          <span style="font-weight:700;">R$ ${(Number(i.price)*i.quantity).toFixed(2).replace('.',',')}</span>
+        </div>
+      `).join('') : '<div style="color:var(--muted);font-size:0.85rem;">Sem itens registrados.</div>';
+    } catch { (document.getElementById('order-info') as HTMLElement).innerHTML = '<div style="color:#f87171;grid-column:1/-1;">Erro ao carregar detalhes.</div>'; }
+  }
+
+  document.getElementById('modal-close')?.addEventListener('click', () => { (document.getElementById('order-modal') as HTMLElement).style.display = 'none'; });
+
+  document.getElementById('btn-update-status')?.addEventListener('click', async () => {
+    if (!currentOrderId) return;
+    const status = (document.getElementById('new-status') as HTMLSelectElement).value;
+    const tracking_code = (document.getElementById('tracking-code') as HTMLInputElement).value;
+    const btn = document.getElementById('btn-update-status') as HTMLButtonElement;
+    btn.textContent = 'SALVANDO...'; btn.disabled = true;
+    const res = await fetch(`/api/v1/orders/${currentOrderId}/status`, {
+      method: 'PATCH',
+      headers: { ...headers(), 'Content-Type': 'application/json' } as HeadersInit,
+      body: JSON.stringify({ status, tracking_code: tracking_code || undefined }),
+    });
+    btn.textContent = 'SALVAR ALTERAÇÃO'; btn.disabled = false;
+    if (res.ok) {
+      (document.getElementById('order-modal') as HTMLElement).style.display = 'none';
+      showMsg('Status atualizado!');
+      loadOrders();
+    } else {
+      const e = await res.json();
+      alert(e.detail || 'Erro ao atualizar status.');
+    }
+  });
+
+  function showMsg(msg: string) {
+    const el = document.getElementById('success-msg') as HTMLElement;
+    el.textContent = '✅ ' + msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  document.getElementById('search-input')?.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(() => { page = 1; loadOrders(); }, 400); });
+  document.getElementById('status-filter')?.addEventListener('change', () => { page = 1; loadOrders(); });
+  document.getElementById('prev-btn')?.addEventListener('click', () => { if (page > 1) { page--; loadOrders(); } });
+  document.getElementById('next-btn')?.addEventListener('click', () => { if (page < totalPages) { page++; loadOrders(); } });
+  document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
+  document.getElementById('order-modal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) (e.currentTarget as HTMLElement).style.display = 'none'; });
+  loadOrders();
+</script>
+</Base>

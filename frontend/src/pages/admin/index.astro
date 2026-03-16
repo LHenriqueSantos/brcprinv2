@@ -11,170 +11,217 @@ import Base from '../../layouts/Base.astro';
   .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
   .nav-item:hover, .nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
   .stat-card { background:#070810; border:1px solid var(--border); padding:1.5rem; border-radius:4px; }
-  .stat-val { font-size:1.8rem; font-weight:900; margin:0.5rem 0 0; }
+  .stat-val { font-size:2rem; font-weight:900; margin:0.5rem 0 0; }
   .badge { display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.7rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
   table { width:100%; border-collapse:collapse; }
   th { padding:0.875rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
   td { padding:0.875rem 1rem; border-bottom:1px solid var(--border); font-size:0.875rem; }
   tr:last-child td { border-bottom:none; }
   tr:hover td { background:rgba(255,255,255,0.015); }
-  .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-bottom:1.5rem; }
+  .card-header { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .card-title { font-size:0.9rem; font-weight:900; text-transform:uppercase; letter-spacing:2px; margin:0; color:var(--accent); }
   .btn-sm { padding:0.35rem 0.875rem; border-radius:2px; font-size:0.75rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; border:1px solid; transition:all 0.15s; }
+  .chart-wrap { padding:1.25rem 1.5rem; }
+  .alert-item { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 1.5rem; border-bottom:1px solid var(--border); font-size:0.85rem; }
+  .alert-item:last-child { border-bottom:none; }
 </style>
 
-<div class="layout" id="admin-layout">
-  <!-- Sidebar -->
+<div class="layout">
   <aside class="sidebar">
     <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
       <img src="/brcprint.svg" alt="BRCPrint" style="height:30px;" onerror="this.style.display='none'" />
       <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-top:0.5rem;">PAINEL ADMIN</div>
     </div>
     <nav>
-      <a href="/admin" class="nav-item active" id="nav-dashboard">📊 Dashboard</a>
-      <a href="/admin/cotacoes" class="nav-item" id="nav-quotes">💰 Cotações</a>
-      <a href="/admin/pedidos" class="nav-item" id="nav-orders">📦 Pedidos</a>
-      <a href="/admin/clientes" class="nav-item" id="nav-clients">👤 Clientes</a>
-      <a href="/admin/catalogo" class="nav-item" id="nav-catalog">🧊 Catálogo</a>
-      <a href="/admin/impressoras" class="nav-item" id="nav-printers">🖨️ Impressoras</a>
-      <a href="/admin/filamentos" class="nav-item" id="nav-filaments">🧵 Filamentos</a>
-      <a href="/admin/leiloes" class="nav-item" id="nav-auctions">⚡ Leilões</a>
+      <a href="/admin" class="nav-item active">📊 Dashboard</a>
+      <a href="/admin/cotacoes" class="nav-item">💰 Cotações</a>
+      <a href="/admin/pedidos" class="nav-item">📦 Pedidos</a>
+      <a href="/admin/clientes" class="nav-item">👤 Clientes</a>
+      <a href="/admin/catalogo" class="nav-item">🧊 Catálogo</a>
+      <a href="/admin/impressoras" class="nav-item">🖨️ Impressoras</a>
+      <a href="/admin/filamentos" class="nav-item">🧵 Filamentos</a>
+      <a href="/admin/leiloes" class="nav-item">⚡ Leilões</a>
     </nav>
     <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
-      <div id="admin-name" style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">Carregando...</div>
+      <div id="admin-name" style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;"></div>
       <button id="btn-logout" style="width:100%;padding:0.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border-radius:2px;text-transform:uppercase;letter-spacing:1px;">Sair</button>
     </div>
   </aside>
 
-  <!-- Main -->
   <main class="main">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
       <h1 style="font-size:1.5rem;font-weight:900;margin:0;text-transform:uppercase;">Dashboard <span style="color:var(--accent);">Admin</span></h1>
-      <div id="error-msg" style="display:none;padding:0.5rem 1rem;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:4px;color:#f87171;font-size:0.85rem;"></div>
+      <div id="last-updated" style="font-size:0.75rem;color:var(--muted);"></div>
     </div>
 
-    <!-- Stats -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2rem;" id="stats-grid">
-      {[
-        ['💰', 'Cotações Hoje', 'stat-quotes', '#3b82f6'],
-        ['⏳', 'Pendentes', 'stat-pending', '#f59e0b'],
-        ['🖨️', 'Em Produção', 'stat-printing', '#8b5cf6'],
-        ['✅', 'Entregues (30d)', 'stat-delivered', '#22c55e'],
-      ].map(([icon, label, id, color]) => (
-        <div class="stat-card" style={`border-top:3px solid ${color};`}>
-          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">{icon} {label}</div>
-          <div class="stat-val" id={id as string} style={`color:${color};`}>—</div>
-        </div>
-      ))}
-    </div>
-
-    <!-- Recent quotes -->
-    <div class="card-wrap">
-      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <h3 style="font-size:0.9rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0;color:var(--accent);">Últimas Cotações</h3>
-        <a href="/admin/cotacoes" style="font-size:0.75rem;color:var(--accent);text-decoration:none;font-weight:700;">VER TODAS →</a>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:2rem;">
+      <div class="stat-card" style="border-top:2px solid var(--accent);">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">📊 Cotações Hoje</div>
+        <div class="stat-val" id="stat-quotes" style="color:var(--accent);">—</div>
       </div>
-      <table>
-        <thead>
-          <tr><th>Cliente</th><th>Arquivo</th><th>Status</th><th>Valor</th><th>Data</th><th></th></tr>
-        </thead>
-        <tbody id="quotes-tbody">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2.5rem;">Carregando...</td></tr>
-        </tbody>
-      </table>
+      <div class="stat-card" style="border-top:2px solid #f59e0b;">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">⏳ Pendentes</div>
+        <div class="stat-val" id="stat-pending" style="color:#f59e0b;">—</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid #8b5cf6;">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">🖨️ Em Produção</div>
+        <div class="stat-val" id="stat-printing" style="color:#8b5cf6;">—</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid #10b981;">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">✅ Entregues (Mês)</div>
+        <div class="stat-val" id="stat-delivered" style="color:#10b981;">—</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid var(--neon-purple);">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">💵 Receita (Mês)</div>
+        <div class="stat-val" id="stat-revenue" style="color:var(--neon-purple);font-size:1.3rem;">—</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+      <div class="card-wrap">
+        <div class="card-header">
+          <h3 class="card-title">📈 Cotações — Últimos 14 Dias</h3>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartQuotes" height="120"></canvas>
+        </div>
+      </div>
+      <div class="card-wrap">
+        <div class="card-header">
+          <h3 class="card-title">💹 Faturamento — 6 Meses</h3>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartRevenue" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;">
+      <div class="card-wrap" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3 class="card-title">🚨 Alertas</h3>
+        </div>
+        <div id="alerts-container">
+          <div class="alert-item" style="color:var(--muted);">Carregando...</div>
+        </div>
+      </div>
+
+      <div class="card-wrap" style="margin-bottom:0;">
+        <div class="card-header">
+          <h3 class="card-title">Últimas Cotações</h3>
+          <a href="/admin/cotacoes" style="font-size:0.75rem;color:var(--accent);text-decoration:none;font-weight:700;">VER TODAS →</a>
+        </div>
+        <table>
+          <thead><tr><th>Cliente</th><th>Status</th><th>Valor</th><th>Data</th><th></th></tr></thead>
+          <tbody id="quotes-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 </div>
 
-<script>
-  const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    pending: { label: 'Pendente', color: '#f59e0b' },
-    quoted: { label: 'Orçado', color: '#3b82f6' },
-    approved: { label: 'Aprovado', color: '#10b981' },
-    in_production: { label: 'Produção', color: '#8b5cf6' },
-    delivered: { label: 'Entregue', color: '#22c55e' },
-    rejected: { label: 'Recusado', color: '#ef4444' },
-    cancelled: { label: 'Cancelado', color: '#6b7280' },
-    awaiting_payment: { label: 'Aguard. Pgto', color: '#f59e0b' },
+<script is:inline>
+(function() {
+  console.log('DASHBOARD INIT');
+
+  var STATUS_MAP = {
+    pending:'#f59e0b', quoted:'#3b82f6', approved:'#10b981',
+    in_production:'#8b5cf6', delivered:'#22c55e', rejected:'#ef4444',
+    cancelled:'#6b7280', awaiting_payment:'#f59e0b'
+  };
+  var STATUS_LABEL = {
+    pending:'Pendente', quoted:'Orçado', approved:'Aprovado',
+    in_production:'Produção', delivered:'Entregue', rejected:'Recusado',
+    cancelled:'Cancelado', awaiting_payment:'Aguard. Pgto'
   };
 
-  function getToken() { return localStorage.getItem('brc_admin_token'); }
+  var qChart = null;
+  var rChart = null;
 
-  function authHeaders() {
-    const t = getToken();
-    return t ? { Authorization: `Bearer ${t}` } : {};
+  function token() { return localStorage.getItem('brc_admin_token') || ''; }
+  function hdrs() { var t=token(); return t ? {'Authorization':'Bearer '+t} : {}; }
+
+  function mkChart(C, id, lbs, dat, col, lbl) {
+    var el = document.getElementById(id);
+    if (!el) return null;
+    var ctx = el.getContext('2d');
+    if (!ctx) return null;
+    var g = ctx.createLinearGradient(0,0,0,200);
+    g.addColorStop(0,col+'55'); g.addColorStop(1,col+'00');
+    return new C(ctx,{type:'line',data:{labels:lbs,datasets:[{label:lbl,data:dat,borderColor:col,backgroundColor:g,borderWidth:2,pointRadius:3,fill:true,tension:0.4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'rgba(255,255,255,0.4)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'rgba(255,255,255,0.4)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},beginAtZero:true}}}});
   }
 
-  async function loadDashboard() {
-    const token = getToken();
-    if (!token) { window.location.href = '/admin/login'; return; }
-
-    try {
-      // Fetch admin info + recent quotes in parallel
-      const [meRes, quotesRes] = await Promise.all([
-        fetch('/api/v1/admin/me', { headers: authHeaders() }),
-        fetch('/api/v1/quotes?limit=10', { headers: authHeaders() }),
-      ]);
-
-      if (meRes.status === 401) { window.location.href = '/admin/login'; return; }
-
-      if (meRes.ok) {
-        const me = await meRes.json();
-        (document.getElementById('admin-name') as HTMLElement).textContent = me.name || me.email;
-      }
-
-      if (quotesRes.ok) {
-        const data = await quotesRes.json();
-        const quotes = data.items || [];
-
-        // Counts
-        const today = new Date().toDateString();
-        let todayCount = 0, pending = 0, printing = 0, delivered30 = 0;
-        const now = Date.now();
-        quotes.forEach((q: any) => {
-          if (new Date(q.created_at).toDateString() === today) todayCount++;
-          if (q.status === 'pending' || q.status === 'quoted') pending++;
-          if (q.status === 'in_production') printing++;
-          if (q.status === 'delivered' && now - new Date(q.created_at).getTime() < 30 * 864e5) delivered30++;
-        });
-        (document.getElementById('stat-quotes') as HTMLElement).textContent = String(todayCount);
-        (document.getElementById('stat-pending') as HTMLElement).textContent = String(pending);
-        (document.getElementById('stat-printing') as HTMLElement).textContent = String(printing);
-        (document.getElementById('stat-delivered') as HTMLElement).textContent = String(delivered30);
-
-        // Table
-        const tbody = document.getElementById('quotes-tbody') as HTMLTableSectionElement;
-        if (quotes.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">Nenhuma cotação encontrada</td></tr>';
-        } else {
-          tbody.innerHTML = quotes.slice(0, 10).map((q: any) => {
-            const s = STATUS_MAP[q.status] || { label: q.status, color: '#888' };
-            const price = q.final_price ? Number(q.final_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
-            const date = new Date(q.created_at).toLocaleDateString('pt-BR');
-            return `<tr>
-              <td style="font-weight:700;">${q.client_name || q.client_email || '—'}</td>
-              <td style="color:var(--muted);">${q.title || 'Cotação'}</td>
-              <td><span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span></td>
-              <td style="font-weight:700;">${price}</td>
-              <td style="color:var(--muted);">${date}</td>
-              <td>
-                <a href="/admin/cotacoes/${q.id}" class="btn-sm" style="color:var(--accent);border-color:rgba(0,242,255,0.3);">VER</a>
-              </td>
-            </tr>`;
-          }).join('');
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      (document.getElementById('error-msg') as HTMLElement).textContent = 'Erro ao carregar dados.';
-      (document.getElementById('error-msg') as HTMLElement).style.display = 'block';
-    }
+  function setText(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val;
   }
 
-  document.getElementById('btn-logout')?.addEventListener('click', () => {
+  function run() {
+    if (!token()) { window.location.href='/admin/login'; return; }
+    console.log('FETCHING DATA');
+
+    var h = hdrs();
+    Promise.all([
+      fetch('/api/v1/admin/me', {headers:h}),
+      fetch('/api/v1/admin/dashboard', {headers:h}),
+      fetch('/api/v1/quotes/?limit=8', {headers:h})
+    ]).then(function(rs) {
+      var meR=rs[0], dR=rs[1], qR=rs[2];
+      console.log('STATUS me:'+meR.status+' dash:'+dR.status+' quotes:'+qR.status);
+
+      if (meR.status===401) { window.location.href='/admin/login'; return; }
+
+      if (meR.ok) meR.json().then(function(m){ setText('admin-name', m.name||m.username||''); });
+
+      if (dR.ok) dR.json().then(function(d){
+        console.log('DASH DATA:', JSON.stringify(d));
+        setText('stat-quotes', d.today_quotes!=null?String(d.today_quotes):'0');
+        setText('stat-pending', d.pending_quotes!=null?String(d.pending_quotes):'0');
+        setText('stat-printing', d.printing_quotes!=null?String(d.printing_quotes):'0');
+        setText('stat-delivered', d.delivered_this_month!=null?String(d.delivered_this_month):'0');
+        setText('stat-revenue', 'R$ '+Number(d.revenue_this_month||0).toLocaleString('pt-BR',{minimumFractionDigits:2}));
+        setText('last-updated', 'Atualizado: '+new Date().toLocaleTimeString('pt-BR'));
+
+        var ac=document.getElementById('alerts-container');
+        var ls=(d.alerts&&d.alerts.low_stock_filaments)||[];
+        if (ac) ac.innerHTML = ls.length ? ls.map(function(f){return '<div class="alert-item"><div><div style="font-weight:700;font-size:0.8rem;">🧵 '+f.name+'</div><div style="font-size:0.75rem;color:var(--muted);">Estoque: '+f.stock+'g / min: '+f.min+'g</div></div><a href="/admin/filamentos" style="font-size:0.7rem;color:#f59e0b;font-weight:700;text-decoration:none;">REPOR</a></div>';}).join('') : '<div class="alert-item" style="color:var(--muted);">✅ Nenhum alerta</div>';
+
+        import('https://esm.sh/chart.js@4.4.2/auto').then(function(m){
+          var C=m.Chart||m.default||m;
+          if (qChart) qChart.destroy();
+          if (rChart) rChart.destroy();
+          qChart=mkChart(C,'chartQuotes',(d.chart_quotes_14d||[]).map(function(x){return x.date;}),(d.chart_quotes_14d||[]).map(function(x){return x.count;}),'#00f2ff','Cotações');
+          rChart=mkChart(C,'chartRevenue',(d.chart_revenue_6m||[]).map(function(x){return x.month;}),(d.chart_revenue_6m||[]).map(function(x){return x.revenue;}),'#bc13fe','Faturamento');
+        }).catch(function(e){console.warn('chartjs err',e);});
+      });
+
+      if (qR.ok) qR.json().then(function(j){
+        var qs=j.items||j||[];
+        var tb=document.getElementById('quotes-tbody');
+        if (!tb) return;
+        if (!qs.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Nenhuma cotação</td></tr>';return;}
+        tb.innerHTML=qs.slice(0,8).map(function(q){
+          var c=STATUS_MAP[q.status]||'#888';
+          var l=STATUS_LABEL[q.status]||q.status;
+          var p=q.final_price?Number(q.final_price).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—';
+          var dt=q.created_at?new Date(q.created_at).toLocaleDateString('pt-BR'):'—';
+          return '<tr><td style="font-weight:700;">'+(q.client_name||q.client_email||'—')+'</td><td><span class="badge" style="background:'+c+'22;color:'+c+';border:1px solid '+c+'44;">'+l+'</span></td><td>'+p+'</td><td style="color:var(--muted);">'+dt+'</td><td><a href="/admin/cotacoes/'+q.id+'" style="color:var(--accent);font-size:0.7rem;font-weight:700;text-decoration:none;">VER</a></td></tr>';
+        }).join('');
+      });
+    }).catch(function(e){ console.error('ERR',e); });
+  }
+
+  var logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) logoutBtn.addEventListener('click', function(){
     localStorage.removeItem('brc_admin_token');
-    window.location.href = '/admin/login';
+    window.location.href='/admin/login';
   });
 
-  loadDashboard();
+  console.log('STARTING RUN');
+  run();
+})();
 </script>
 </Base>

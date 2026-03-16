@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "BRCPrint API"
+    APP_NAME: str = "API brcprint by brcode solutions"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
 
