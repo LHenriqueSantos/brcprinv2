@@ -1,0 +1,63 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Esqueci a Senha — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; }
+  .card { width:100%; max-width:420px; background:rgba(10,12,18,0.85); border:1px solid var(--border); border-top:3px solid var(--accent); padding:3rem 2.5rem; backdrop-filter:blur(20px); }
+  .input-field { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.85rem 1rem; color:#fff; font-size:0.95rem; font-family:'Inter',sans-serif; box-sizing:border-box; transition:border-color 0.2s; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  .label { display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.5rem; }
+  .btn { width:100%; padding:1rem; background:transparent; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.9rem; text-transform:uppercase; letter-spacing:3px; cursor:pointer; font-family:'Inter',sans-serif; border-radius:2px; transition:all 0.2s; }
+  .btn:hover { background:rgba(0,242,255,0.1); }
+</style>
+<div class="wrap">
+  <div class="card">
+    <div style="text-align:center;margin-bottom:2.5rem;">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:42px;margin-bottom:1rem;" />
+      <h1 style="font-size:1.1rem;font-weight:900;text-transform:uppercase;letter-spacing:3px;color:#fff;">Recuperar Acesso</h1>
+      <p style="color:var(--muted);font-size:0.85rem;margin-top:0.5rem;">Informe seu e-mail e enviaremos as instruções de redefinição.</p>
+    </div>
+
+    <div id="success" style="display:none;padding:1.25rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;text-align:center;font-weight:700;margin-bottom:1.5rem;">
+      ✅ E-mail de recuperação enviado! Verifique sua caixa de entrada.
+    </div>
+    <div id="error-msg" style="display:none;padding:0.75rem;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:4px;color:#f87171;margin-bottom:1rem;font-size:0.85rem;"></div>
+
+    <form id="forgot-form">
+      <div style="margin-bottom:1.5rem;">
+        <label class="label" for="email">E-mail</label>
+        <input class="input-field" type="email" id="email" placeholder="seu@email.com" required autofocus />
+      </div>
+      <button type="submit" class="btn" id="btn">ENVIAR INSTRUÇÕES</button>
+    </form>
+
+    <div style="text-align:center;margin-top:1.5rem;">
+      <a href="/minha-conta/login" style="color:var(--accent);text-decoration:none;font-size:0.85rem;">← Voltar ao login</a>
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById('forgot-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn') as HTMLButtonElement;
+    const errEl = document.getElementById('error-msg') as HTMLElement;
+    btn.textContent = 'ENVIANDO...'; btn.disabled = true; errEl.style.display = 'none';
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    try {
+      const res = await fetch('/api/v1/auth/forgot-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Erro ao enviar.'); }
+      (document.getElementById('forgot-form') as HTMLElement).style.display = 'none';
+      (document.getElementById('success') as HTMLElement).style.display = 'block';
+    } catch (err: any) {
+      errEl.textContent = err.message; errEl.style.display = 'block';
+      btn.textContent = 'ENVIAR INSTRUÇÕES'; btn.disabled = false;
+    }
+  });
+</script>
+</Base>

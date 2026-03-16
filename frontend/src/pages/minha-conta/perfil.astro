@@ -1,0 +1,135 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Meu Perfil — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .wrap { max-width:700px; margin:0 auto; padding:3rem 1.5rem; }
+  .card { background:rgba(10,12,18,0.7); border:1px solid var(--border); border-radius:4px; padding:2rem; margin-bottom:1.5rem; }
+  .input-field { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.75rem 1rem; color:#fff; font-size:0.9rem; font-family:'Inter',sans-serif; box-sizing:border-box; transition:border-color 0.2s; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  .label { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .field { margin-bottom:1.25rem; }
+  .btn { padding:0.85rem 2rem; background:transparent; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.85rem; text-transform:uppercase; letter-spacing:2px; cursor:pointer; font-family:'Inter',sans-serif; border-radius:2px; transition:all 0.2s; }
+  .btn:hover { background:rgba(0,242,255,0.1); }
+</style>
+
+<nav style="background:rgba(10,12,18,0.95);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;height:60px;gap:1.5rem;">
+  <a href="/minha-conta" style="color:var(--muted);text-decoration:none;font-size:0.85rem;">← Voltar</a>
+  <span style="color:var(--border);">|</span>
+  <span style="font-weight:900;text-transform:uppercase;letter-spacing:2px;font-size:0.9rem;color:var(--accent);">Meu Perfil</span>
+</nav>
+
+<div class="wrap">
+  <h1 style="font-size:1.8rem;font-weight:900;margin:0 0 2rem;">Meu <span style="color:var(--accent);">Perfil</span></h1>
+  <div id="success-msg" style="display:none;padding:1rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;margin-bottom:1.5rem;font-weight:700;">✅ Perfil atualizado com sucesso!</div>
+  <div id="error-msg" style="display:none;padding:1rem;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:4px;color:#f87171;margin-bottom:1.5rem;"></div>
+
+  <div class="card">
+    <h3 style="font-size:0.9rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 1.5rem;color:var(--accent);">Dados Pessoais</h3>
+    <form id="profile-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="field">
+          <label class="label">Nome</label>
+          <input class="input-field" type="text" id="name" placeholder="Seu nome" />
+        </div>
+        <div class="field">
+          <label class="label">WhatsApp</label>
+          <input class="input-field" type="tel" id="phone" placeholder="(11) 99999-9999" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">E-mail</label>
+        <input class="input-field" type="email" id="email" readonly style="opacity:0.5;cursor:not-allowed;" />
+      </div>
+      <div class="field">
+        <label class="label">CPF / CNPJ</label>
+        <input class="input-field" type="text" id="document" placeholder="000.000.000-00" />
+      </div>
+      <div class="field">
+        <label class="label">Empresa (opcional)</label>
+        <input class="input-field" type="text" id="company" placeholder="Nome da empresa" />
+      </div>
+      <button type="submit" class="btn">SALVAR ALTERAÇÕES</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:0.9rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 1.5rem;color:var(--accent);">Alterar Senha</h3>
+    <form id="password-form">
+      <div class="field">
+        <label class="label">Senha Atual</label>
+        <input class="input-field" type="password" id="current-pass" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div class="field">
+          <label class="label">Nova Senha</label>
+          <input class="input-field" type="password" id="new-pass" minlength="8" />
+        </div>
+        <div class="field">
+          <label class="label">Confirmar</label>
+          <input class="input-field" type="password" id="confirm-pass" />
+        </div>
+      </div>
+      <button type="submit" class="btn" style="border-color:var(--neon-purple);color:var(--neon-purple);">ALTERAR SENHA</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const token = () => localStorage.getItem('brc_token');
+  const errEl = document.getElementById('error-msg') as HTMLElement;
+  const succEl = document.getElementById('success-msg') as HTMLElement;
+
+  async function loadProfile() {
+    if (!token()) { window.location.href = '/minha-conta/login'; return; }
+    try {
+      const res = await fetch('/api/v1/clients/me', { headers: { Authorization: `Bearer ${token()}` } });
+      if (res.status === 401) { window.location.href = '/minha-conta/login'; return; }
+      const c = await res.json();
+      (document.getElementById('name') as HTMLInputElement).value = c.name || '';
+      (document.getElementById('email') as HTMLInputElement).value = c.email || '';
+      (document.getElementById('phone') as HTMLInputElement).value = c.phone || '';
+      (document.getElementById('document') as HTMLInputElement).value = c.document_number || '';
+      (document.getElementById('company') as HTMLInputElement).value = c.company_name || '';
+    } catch {}
+  }
+
+  document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errEl.style.display = 'none'; succEl.style.display = 'none';
+    try {
+      const res = await fetch('/api/v1/clients/me', {
+        method: 'PATCH', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token()}` },
+        body: JSON.stringify({
+          name: (document.getElementById('name') as HTMLInputElement).value,
+          phone: (document.getElementById('phone') as HTMLInputElement).value,
+          document_number: (document.getElementById('document') as HTMLInputElement).value,
+          company_name: (document.getElementById('company') as HTMLInputElement).value,
+        })
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Erro ao salvar.'); }
+      succEl.style.display = 'block'; window.scrollTo({ top:0, behavior:'smooth' });
+    } catch (e: any) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  });
+
+  document.getElementById('password-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const np = (document.getElementById('new-pass') as HTMLInputElement).value;
+    const cp = (document.getElementById('confirm-pass') as HTMLInputElement).value;
+    if (np !== cp) { errEl.textContent = 'As senhas não coincidem.'; errEl.style.display = 'block'; return; }
+    try {
+      const res = await fetch('/api/v1/auth/change-password', {
+        method: 'POST', headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token()}` },
+        body: JSON.stringify({ current_password:(document.getElementById('current-pass') as HTMLInputElement).value, new_password:np })
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Erro ao alterar senha.'); }
+      (document.getElementById('password-form') as HTMLFormElement).reset();
+      succEl.textContent = '✅ Senha alterada com sucesso!'; succEl.style.display = 'block';
+    } catch (e: any) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  });
+
+  loadProfile();
+</script>
+</Base>

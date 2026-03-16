@@ -1,0 +1,13 @@
+# Exemplo de configuração Caddyfile para Proxy Reverso HTTPS Automático.
+# Este arquivo é sobrescrito interativamente pelo instalador automático (setup.sh).
+# Para rodar manualmente: Substitua os domínios abaixo pelo seu domínio e e-mail.
+
+localhost {
+    # Em localhost, o Caddy usa um certificado auto-assinado local (Trust required no OS).
+    # Na produção (ex: api.empresa.com.br), troque
+
+    # tls seu-email@empresa.com.br
+
+    encode zstd gzip
+    reverse_proxy brcprint_app_prod:3000
+}

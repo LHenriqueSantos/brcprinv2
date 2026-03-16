@@ -1,0 +1,47 @@
+# docker-compose.dev.yml — Override para desenvolvimento local (sem SSL, sem Bambu Studio build)
+# Uso: docker compose -f docker-compose.v2.yml -f docker-compose.dev.yml up
+
+services:
+  # ── Nginx usa config HTTP local (sem SSL) ──────────────────────────────────
+  nginx:
+    volumes:
+      - ./nginx/conf.d/v2.dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public/uploads:/var/www/uploads:ro
+    # Remove os volumes de SSL que não existem localmente
+    # (sobrescreve o volumes do arquivo principal)
+
+  # ── FastAPI: hot-reload em dev ─────────────────────────────────────────────
+  fastapi:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DEBUG: "true"
+
+  # ── Slicer v2: usa imagem leve (sem Bambu Studio) — só estimativa em dev ──
+  slicer:
+    build:
+      context: ./slicer-api-v2
+      dockerfile: Dockerfile.dev
+    restart: "no"
+
+  # ── Frontend Astro: modo dev com HMR ─────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    command: npm run dev
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
+  # ── Desativar serviços pesados em dev ─────────────────────────────────────
+  auction_bot:
+    profiles:
+      - donotstart
+
+  evolution:
+    profiles:
+      - donotstart
+
+  postgres_evolution:
+    profiles:
+      - donotstart

@@ -1,0 +1,227 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Cotações — Admin BRCPrint" showNav={false}>
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .sidebar { background:#070810; border-right:1px solid var(--border); padding:1.5rem 1rem; }
+  .main { padding:2rem 2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
+  .nav-item:hover, .nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:0.875rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:0.875rem 1rem; border-bottom:1px solid var(--border); font-size:0.875rem; }
+  tr:hover td { background:rgba(255,255,255,0.015); }
+  .badge { display:inline-flex; padding:0.25rem 0.7rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
+  .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .input-field { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.5rem 0.875rem; color:#fff; font-family:'Inter',sans-serif; font-size:0.85rem; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  .btn-sm { padding:0.35rem 0.875rem; border-radius:2px; font-size:0.72rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; border:1px solid; background:transparent; transition:all 0.15s; }
+  select.input-field { cursor:pointer; }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:30px;" onerror="this.style.display='none'" />
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-top:0.5rem;">PAINEL ADMIN</div>
+    </div>
+    <nav>
+      <a href="/admin" class="nav-item">📊 Dashboard</a>
+      <a href="/admin/cotacoes" class="nav-item active">💰 Cotações</a>
+      <a href="/admin/pedidos" class="nav-item">📦 Pedidos</a>
+      <a href="/admin/clientes" class="nav-item">👤 Clientes</a>
+      <a href="/admin/catalogo" class="nav-item">🧊 Catálogo</a>
+      <a href="/admin/impressoras" class="nav-item">🖨️ Impressoras</a>
+      <a href="/admin/filamentos" class="nav-item">🧵 Filamentos</a>
+      <a href="/admin/leiloes" class="nav-item">⚡ Leilões</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+      <button id="btn-logout" style="width:100%;padding:0.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border-radius:2px;text-transform:uppercase;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Header / Filters -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+      <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Cotações</h1>
+      <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+        <input class="input-field" type="search" id="search-input" placeholder="Buscar cliente/arquivo..." style="width:240px;" />
+        <select class="input-field" id="status-filter">
+          <option value="">Todos os status</option>
+          <option value="pending">Pendente</option>
+          <option value="quoted">Orçado</option>
+          <option value="approved">Aprovado</option>
+          <option value="awaiting_payment">Aguard. Pagamento</option>
+          <option value="in_production">Em Produção</option>
+          <option value="delivered">Entregue</option>
+          <option value="rejected">Recusado</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Cliente</th><th>Arquivo/Projeto</th><th>Status</th><th>Valor</th><th>Data</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="quotes-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:3rem;">Carregando...</td></tr>
+        </tbody>
+      </table>
+      <!-- Pagination -->
+      <div id="pagination" style="display:none;padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span id="pagination-info" style="font-size:0.8rem;color:var(--muted);"></span>
+        <div style="display:flex;gap:0.5rem;">
+          <button id="prev-btn" class="btn-sm" style="color:var(--muted);border-color:var(--border);" disabled>← PREV</button>
+          <button id="next-btn" class="btn-sm" style="color:var(--accent);border-color:rgba(0,242,255,0.3);">NEXT →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick status modal -->
+    <div id="status-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;display:flex;align-items:center;justify-content:center;">
+      <div style="background:#070810;border:1px solid var(--border);border-radius:4px;padding:2rem;width:400px;max-width:90vw;">
+        <h3 style="font-size:0.9rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:0 0 1.5rem;">Atualizar Status</h3>
+        <div style="margin-bottom:1rem;">
+          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Novo Status</div>
+          <select class="input-field" id="new-status" style="width:100%;">
+            <option value="pending">Pendente</option>
+            <option value="quoted">Orçado</option>
+            <option value="approved">Aprovado</option>
+            <option value="in_production">Em Produção</option>
+            <option value="delivered">Entregue</option>
+            <option value="rejected">Recusado</option>
+          </select>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Nota (opcional)</div>
+          <textarea class="input-field" id="status-note" rows="2" style="width:100%;box-sizing:border-box;" placeholder="Mensagem para o cliente..."></textarea>
+        </div>
+        <div style="display:flex;gap:0.75rem;">
+          <button id="modal-cancel" class="btn-sm" style="color:var(--muted);border-color:var(--border);padding:0.65rem 1.25rem;">CANCELAR</button>
+          <button id="modal-save" class="btn-sm" style="color:var(--accent);border-color:rgba(0,242,255,0.3);padding:0.65rem 1.25rem;">SALVAR</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const STATUS_MAP: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pendente', color: '#f59e0b' },
+    quoted: { label: 'Orçado', color: '#3b82f6' },
+    approved: { label: 'Aprovado', color: '#10b981' },
+    in_production: { label: 'Produção', color: '#8b5cf6' },
+    delivered: { label: 'Entregue', color: '#22c55e' },
+    rejected: { label: 'Recusado', color: '#ef4444' },
+    cancelled: { label: 'Cancelado', color: '#6b7280' },
+    awaiting_payment: { label: 'Aguard. Pgto', color: '#f59e0b' },
+  };
+
+  let page = 1, totalPages = 1, totalItems = 0;
+  let activeQuoteId: number | null = null;
+  let debounce: any;
+
+  function headers() {
+    const t = localStorage.getItem('brc_admin_token') || '';
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  }
+
+  async function loadQuotes() {
+    if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
+    const status = (document.getElementById('status-filter') as HTMLSelectElement).value;
+    const search = (document.getElementById('search-input') as HTMLInputElement).value;
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (status) params.set('status', status);
+    if (search) params.set('search', search);
+
+    const tbody = document.getElementById('quotes-tbody') as HTMLTableSectionElement;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem;">Carregando...</td></tr>';
+
+    try {
+      const res = await fetch(`/api/v1/quotes?${params}`, { headers: headers() });
+      if (res.status === 401) { window.location.href = '/admin/login'; return; }
+      const data = await res.json();
+      const quotes = data.items || [];
+      totalPages = data.pages || 1;
+      totalItems = data.total || 0;
+
+      (document.getElementById('pagination-info') as HTMLElement).textContent =
+        `${totalItems} cotações · Página ${page} de ${totalPages}`;
+      (document.getElementById('pagination') as HTMLElement).style.display = 'flex';
+      (document.getElementById('prev-btn') as HTMLButtonElement).disabled = page <= 1;
+      (document.getElementById('next-btn') as HTMLButtonElement).disabled = page >= totalPages;
+
+      if (quotes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2.5rem;">Nenhuma cotação encontrada</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = quotes.map((q: any) => {
+        const s = STATUS_MAP[q.status] || { label: q.status, color: '#888' };
+        const price = q.final_price ? Number(q.final_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
+        const date = new Date(q.created_at).toLocaleDateString('pt-BR');
+        return `<tr>
+          <td style="color:var(--muted);font-size:0.8rem;">#${q.id}</td>
+          <td>
+            <div style="font-weight:700;">${q.client_name || '—'}</div>
+            <div style="font-size:0.75rem;color:var(--muted);">${q.client_email || ''}</div>
+          </td>
+          <td>${q.title || 'Cotação'}</td>
+          <td><span class="badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44;">${s.label}</span></td>
+          <td style="font-weight:700;">${price}</td>
+          <td style="color:var(--muted);font-size:0.8rem;">${date}</td>
+          <td>
+            <div style="display:flex;gap:0.4rem;">
+              ${q.public_token ? `<a href="/portal/${q.public_token}" target="_blank" class="btn-sm" style="color:var(--accent);border-color:rgba(0,242,255,0.3);text-decoration:none;">VER</a>` : ''}
+              <button class="btn-sm update-status-btn" data-id="${q.id}" data-status="${q.status}" style="color:#f59e0b;border-color:rgba(245,158,11,0.3);">STATUS</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      // Bind status buttons
+      document.querySelectorAll('.update-status-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeQuoteId = Number((btn as HTMLElement).dataset.id);
+          (document.getElementById('new-status') as HTMLSelectElement).value = (btn as HTMLElement).dataset.status || '';
+          (document.getElementById('status-modal') as HTMLElement).style.display = 'flex';
+        });
+      });
+    } catch { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#f87171;padding:2rem;">Erro ao carregar cotações.</td></tr>'; }
+  }
+
+  // Modal
+  document.getElementById('modal-cancel')?.addEventListener('click', () => {
+    (document.getElementById('status-modal') as HTMLElement).style.display = 'none';
+  });
+  document.getElementById('modal-save')?.addEventListener('click', async () => {
+    if (!activeQuoteId) return;
+    const status = (document.getElementById('new-status') as HTMLSelectElement).value;
+    const notes = (document.getElementById('status-note') as HTMLTextAreaElement).value;
+    try {
+      await fetch(`/api/v1/quotes/${activeQuoteId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers() },
+        body: JSON.stringify({ status, notes }),
+      });
+      (document.getElementById('status-modal') as HTMLElement).style.display = 'none';
+      loadQuotes();
+    } catch { alert('Erro ao atualizar status.'); }
+  });
+
+  // Filters/search
+  document.getElementById('status-filter')?.addEventListener('change', () => { page = 1; loadQuotes(); });
+  document.getElementById('search-input')?.addEventListener('input', () => {
+    clearTimeout(debounce); debounce = setTimeout(() => { page = 1; loadQuotes(); }, 400);
+  });
+  document.getElementById('prev-btn')?.addEventListener('click', () => { if (page > 1) { page--; loadQuotes(); } });
+  document.getElementById('next-btn')?.addEventListener('click', () => { if (page < totalPages) { page++; loadQuotes(); } });
+  document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
+
+  loadQuotes();
+</script>
+</Base>

@@ -1,0 +1,101 @@
+{
+  "portal_title": "Cotação #{{id}}",
+  "portal_welcome": "Olá, {{name}}! Sua cotação está pronta.",
+  "error_not_found": "Cotação não encontrada",
+  "error_not_found_msg": "O link pode estar expirado ou inválido.",
+  "status": {
+    "pending": "Em Análise",
+    "quoted": "Orçado",
+    "approved": "Aprovado",
+    "rejected": "RECUSAR",
+    "counter_offer": "Contraproposta",
+    "in_production": "Em Produção",
+    "delivered": "Entregue",
+    "awaiting_payment": "Aguardando Pagamento"
+  },
+  "valid_until": "Válida até {{date}}",
+  "expired": "Cotação vencida",
+  "expired_msg": "O prazo de validade expirou. Entre em contato para uma nova cotação.",
+  "viewer_title": "Visualização 3D da Peça",
+  "summary_title": "Resumo do Pedido",
+  "summary": {
+    "title": "Resumo do Pedido",
+    "quantity": "Quantidade Total",
+    "subtotal": "Subtotal",
+    "quote.valid_until": "Válido até {{date}}",
+    "per_unit": "Preço por Peça",
+    "total_lot": "Valor Total do Pedido",
+    "disclaimer": "O preço por peça é o valor base. Impostos e frete são somados ao total final."
+  },
+  "quote": {
+    "unit": "peça(s)",
+    "id_label": "Pedido",
+    "status_label": "Status da Cotação",
+    "untitled": "Sem título",
+    "print_params": "Parâmetros de Impressão",
+    "valid_until": "Válida até",
+    "printer": "Impressora",
+    "filament": "Filamento",
+    "weight": "Peso",
+    "print_time": "Tempo Estimado",
+    "composition": "Composição de Custos",
+    "labor": "Mão de Obra",
+    "material": "Material (Filamento)",
+    "energy": "Energia Elétrica",
+    "shipping_options": "Opções de Frete",
+    "extras_label": "Serviços Adicionais",
+    "tax": "Impostos"
+  },
+  "composition_title": "Composição do Preço",
+  "composition": {
+    "hours": "⏱️ Horas de impressão",
+    "weight": "🧵 Material consumido",
+    "energy": "⚡ Energia elétrica",
+    "labor": "👷 Mão de obra"
+  },
+  "shipping": "Sobre a Entrega",
+  "shipping_options": "Opções de Frete",
+  "shipping_select": "Selecione uma opção...",
+  "extras_title": "Serviços de Pós-Processamento (Upsells)",
+  "total_price": "PREÇO TOTAL COM FRETE",
+  "quantity_line": "{{qty}} peça(s) + frete e opcionais",
+  "actions": {
+    "title": "O que deseja fazer?",
+    "approve_pay": "Aprovar e Pagar",
+    "approve": "Aprovar Cotação",
+    "counter": "Fazer Contraproposta",
+    "counter_offer": "Fazer Contraproposta",
+    "reject": "Rejeitar",
+    "reject_confirm": "Tem certeza que deseja rejeitar esta cotação?",
+    "send_proposal": "Enviar Proposta",
+    "back": "Voltar",
+    "download_pdf": "PDF DA COTAÇÃO",
+    "download_3d_file": "Baixar Arquivo 3D",
+    "files": "Arquivos",
+    "download": "Download",
+    "processing": "Aguarde...",
+    "proposed_price": "Valor proposto por peça",
+    "notes": "Justificativa (opcional)",
+    "notes_placeholder": "Explique sua proposta...",
+    "send": "Enviar Proposta",
+    "cancel": "Cancelar"
+  },
+  "counter_form": {
+    "title": "Sua Contraproposta",
+    "price_label": "Valor proposto por peça ({{symbol}})",
+    "notes_label": "Justificativa (opcional)",
+    "notes_placeholder": "Explique sua proposta..."
+  },
+  "done": {
+    "approved": "Cotação Aprovada!",
+    "counter": "Proposta Enviada!",
+    "rejected": "Cotação Rejeitada",
+    "msg_approved": "Recebemos sua aprovação! Em breve entraremos em contato.",
+    "msg_counter": "Recebemos sua proposta! Analisaremos e retornaremos em breve.",
+    "msg_rejected": "Recebemos sua resposta. Obrigado pelo retorno!"
+  },
+  "chat_title": "Central de Mensagens",
+  "footer": {
+    "tagline": "Cotação online"
+  }
+}

@@ -1,0 +1,94 @@
+---
+import Base from '../../layouts/Base.astro';
+
+// Fetch active auctions from FastAPI
+let auctions: any[] = [];
+try {
+  const API = import.meta.env.API_INTERNAL_URL || 'http://fastapi:8000';
+  const res = await fetch(`${API}/api/v1/auctions?status=active`);
+  if (res.ok) auctions = await res.json();
+} catch {}
+---
+<Base title="Leilão 3D — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-purple:#bc13fe; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .hero { padding:5rem 2rem 3rem; text-align:center; background:radial-gradient(ellipse at center top,rgba(188,19,254,0.08) 0%,transparent 60%); border-bottom:1px solid var(--border); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.5rem; padding:3rem 2rem; max-width:1200px; margin:0 auto; }
+  .auction-card { background:rgba(10,12,18,0.7); border:1px solid rgba(188,19,254,0.3); border-radius:4px; overflow:hidden; transition:all 0.25s; }
+  .auction-card:hover { border-color:var(--neon-purple); box-shadow:0 0 30px rgba(188,19,254,0.15); transform:translateY(-2px); }
+  .auction-img { width:100%; height:180px; object-fit:cover; background:#0d0f14; display:flex; align-items:center; justify-content:center; font-size:3.5rem; }
+  .auction-body { padding:1.25rem; }
+  .timer { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#f59e0b; display:flex; align-items:center; gap:0.4rem; margin-bottom:0.75rem; }
+  .current-bid { font-size:1.6rem; font-weight:900; color:var(--neon-purple); }
+  .btn-bid { width:100%; padding:0.875rem; background:transparent; border:1px solid var(--neon-purple); color:var(--neon-purple); font-weight:900; font-size:0.85rem; text-transform:uppercase; letter-spacing:2px; cursor:pointer; font-family:'Inter',sans-serif; border-radius:2px; transition:all 0.2s; margin-top:1rem; }
+  .btn-bid:hover { background:rgba(188,19,254,0.1); box-shadow:0 0 20px rgba(188,19,254,0.2); }
+</style>
+
+<div class="hero">
+  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:var(--neon-purple);margin-bottom:1rem;">⚡ LEILÃO AO VIVO</div>
+  <h1 style="font-size:3rem;font-weight:900;margin:0 0 1rem;">Leilão de <span style="color:var(--neon-purple);">Impressão 3D</span></h1>
+  <p style="color:var(--muted);font-size:1.1rem;max-width:550px;margin:0 auto">Dê seu lance nos modelos disponíveis. Menor oferta dentro do prazo leva a produção!</p>
+  <div style="margin-top:2rem;display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
+    {[['PHASE_01','Lance Inicial'],['PHASE_02','Disputa'],['PHASE_03','Produção']].map(([ph,label]) => (
+      <div style="text-align:center;padding:1rem 1.5rem;background:rgba(188,19,254,0.06);border:1px solid rgba(188,19,254,0.2);border-radius:4px;min-width:130px;">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;color:var(--neon-purple);">{ph}</div>
+        <div style="font-weight:800;margin-top:0.25rem;font-size:0.9rem;">{label}</div>
+      </div>
+    ))}
+  </div>
+</div>
+
+{auctions.length === 0 ? (
+  <div style="text-align:center;padding:6rem 2rem;color:var(--muted);">
+    <p style="font-size:3rem;margin:0 0 1rem;">🏷️</p>
+    <h3 style="color:#fff;margin:0 0 0.5rem;">Nenhum leilão ativo no momento</h3>
+    <p>Novos leilões são lançados periodicamente. Volte em breve!</p>
+  </div>
+) : (
+  <div class="grid">
+    {auctions.map((a: any) => (
+      <div class="auction-card">
+        {a.image_url ? (
+          <img src={a.image_url} alt={a.title} class="auction-img" style="font-size:1rem;" />
+        ) : (
+          <div class="auction-img">🏷️</div>
+        )}
+        <div class="auction-body">
+          <div class="timer">⏱ <span data-expires={a.ends_at} class="countdown-timer">{a.ends_at ? new Date(a.ends_at).toLocaleDateString('pt-BR') : 'Em breve'}</span></div>
+          <h3 style="font-size:1rem;font-weight:900;margin:0 0 0.5rem;">{a.title}</h3>
+          {a.description && <p style="font-size:0.8rem;color:var(--muted);margin:0 0 1rem;line-height:1.5;">{a.description}</p>}
+          <div style="margin-bottom:0.5rem;">
+            <div style="font-size:0.7rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Lance Atual</div>
+            <div class="current-bid">R$ {Number(a.current_bid || a.start_bid || 0).toFixed(2).replace('.', ',')}</div>
+          </div>
+          {a.total_bids && <div style="font-size:0.75rem;color:var(--muted);">{a.total_bids} lances · Mínimo R$ {Number(a.min_increment || 1).toFixed(2).replace('.', ',')}</div>}
+          <a href={`/leilao/${a.id}`} style="text-decoration:none;">
+            <button class="btn-bid">⚡ DAR LANCE</button>
+          </a>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
+<script>
+  // Live countdown timers
+  document.querySelectorAll('.countdown-timer').forEach((el: Element) => {
+    const expiresAt = (el as HTMLElement).dataset.expires;
+    if (!expiresAt) return;
+    const target = new Date(expiresAt).getTime();
+    const update = () => {
+      const now = Date.now();
+      const diff = target - now;
+      if (diff <= 0) { el.textContent = 'Encerrado'; return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      el.textContent = `${h}h ${m}m ${s}s`;
+      setTimeout(update, 1000);
+    };
+    update();
+  });
+</script>
+</Base>

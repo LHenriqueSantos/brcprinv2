@@ -1,0 +1,161 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const { id } = Astro.params;
+let auction: any = null;
+let bids: any[] = [];
+
+try {
+  const API = import.meta.env.API_INTERNAL_URL || 'http://fastapi:8000';
+  const [aRes, bRes] = await Promise.allSettled([
+    fetch(`${API}/api/v1/auctions/${id}`),
+    fetch(`${API}/api/v1/auctions/${id}/bids?limit=10`),
+  ]);
+  if (aRes.status === 'fulfilled' && aRes.value.ok) auction = await aRes.value.json();
+  if (bRes.status === 'fulfilled' && bRes.value.ok) bids = await bRes.value.json();
+} catch {}
+
+function fmtBRL(v: number) {
+  return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+---
+<Base title={auction ? `Leilão: ${auction.title}` : 'Leilão — BRCPrint'}>
+<style>
+  :root { --accent:#00f2ff; --neon-purple:#bc13fe; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .wrap { max-width:860px; margin:0 auto; padding:3rem 1.5rem; }
+  .card { background:rgba(10,12,18,0.7); border:1px solid var(--border); border-radius:4px; padding:2rem; margin-bottom:1.5rem; }
+  .input-field { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(188,19,254,0.4); border-radius:4px; padding:0.85rem 1rem; color:#fff; font-size:1rem; font-family:'Inter',sans-serif; box-sizing:border-box; transition:border-color 0.2s; }
+  .input-field:focus { outline:none; border-color:var(--neon-purple); }
+  .btn-bid { width:100%; padding:1.1rem; background:linear-gradient(135deg,rgba(188,19,254,0.2),rgba(188,19,254,0.1)); border:1px solid var(--neon-purple); color:var(--neon-purple); font-weight:900; font-size:1rem; text-transform:uppercase; letter-spacing:3px; cursor:pointer; font-family:'Inter',sans-serif; border-radius:2px; transition:all 0.2s; margin-top:0.75rem; }
+  .btn-bid:hover { background:rgba(188,19,254,0.2); box-shadow:0 0 25px rgba(188,19,254,0.3); }
+</style>
+
+{!auction ? (
+  <div class="wrap" style="text-align:center;padding-top:4rem;">
+    <p style="font-size:3rem;margin:0 0 1rem;">❌</p>
+    <h2>Leilão não encontrado</h2>
+    <a href="/leiloes" style="color:var(--neon-purple);text-decoration:none;">← Ver todos os leilões</a>
+  </div>
+) : (
+  <div class="wrap">
+    <div style="margin-bottom:2rem;">
+      <a href="/leiloes" style="color:var(--muted);text-decoration:none;font-size:0.85rem;">← Todos os Leilões</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;" class="layout">
+      <!-- Left -->
+      <div>
+        {auction.image_url ? (
+          <img src={auction.image_url} alt={auction.title} style="width:100%;border-radius:4px;border:1px solid var(--border);margin-bottom:1.5rem;aspect-ratio:16/9;object-fit:cover;" />
+        ) : (
+          <div style="width:100%;aspect-ratio:16/9;background:#0d0f14;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:5rem;margin-bottom:1.5rem;">🏷️</div>
+        )}
+
+        <h1 style="font-size:1.8rem;font-weight:900;margin:0 0 1rem;">{auction.title}</h1>
+        {auction.description && <p style="color:var(--muted);line-height:1.7;margin:0 0 2rem;">{auction.description}</p>}
+
+        <!-- Bids history -->
+        {bids.length > 0 && (
+          <div class="card">
+            <h3 style="font-size:0.85rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 1.25rem;color:var(--neon-purple);">Histórico de Lances</h3>
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+              {bids.map((bid: any, idx: number) => (
+                <div style={`display:flex;align-items:center;justify-content:space-between;padding:0.75rem;background:rgba(188,19,254,0.06);border:1px solid rgba(188,19,254,${idx===0?'0.3':'0.1'});border-radius:4px;`}>
+                  <div>
+                    <span style={`font-weight:700;${idx===0 ? 'color:var(--neon-purple);' : ''}`}>{bid.bidder_name || 'Anônimo'}</span>
+                    {idx === 0 && <span style="margin-left:0.5rem;font-size:0.7rem;background:rgba(188,19,254,0.2);color:var(--neon-purple);padding:0.2rem 0.6rem;border-radius:999px;font-weight:700;">LÍDER</span>}
+                  </div>
+                  <div style={`font-weight:900;font-size:1.1rem;${idx===0 ? 'color:var(--neon-purple);' : 'color:var(--muted);'}`}>{fmtBRL(bid.amount)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <!-- Right: Bid panel -->
+      <div>
+        <div class="card" style="border:1px solid rgba(188,19,254,0.3);border-top:3px solid var(--neon-purple);position:sticky;top:80px;">
+          <div style="text-align:center;margin-bottom:1.5rem;">
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:0.5rem;">Lance Atual</div>
+            <div style="font-size:2.5rem;font-weight:900;color:var(--neon-purple);">{fmtBRL(auction.current_bid || auction.start_bid || 0)}</div>
+            {auction.total_bids && <div style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;">{auction.total_bids} lances</div>}
+          </div>
+
+          <div style="margin-bottom:1.25rem;padding:1rem;background:rgba(255,165,0,0.06);border:1px solid rgba(255,165,0,0.2);border-radius:4px;text-align:center;">
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:0.25rem;">⏱ Tempo Restante</div>
+            <div id="countdown" style="font-size:1.5rem;font-weight:900;color:#f59e0b;" data-expires={auction.ends_at}>
+              {auction.ends_at ? new Date(auction.ends_at).toLocaleDateString('pt-BR') : 'Em breve'}
+            </div>
+          </div>
+
+          <div id="error-msg" style="display:none;padding:0.75rem;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:4px;color:#f87171;margin-bottom:1rem;font-size:0.85rem;"></div>
+          <div id="success-msg" style="display:none;padding:0.75rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;margin-bottom:1rem;font-size:0.85rem;font-weight:700;"></div>
+
+          <label style="display:block;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--neon-purple);margin-bottom:0.5rem;">Seu Lance (R$)</label>
+          <input class="input-field" type="number" id="bid-amount" step="0.01"
+            min={Number(auction.current_bid || auction.start_bid || 0) + Number(auction.min_increment || 1)}
+            placeholder={`Mín: ${fmtBRL(Number(auction.current_bid || auction.start_bid || 0) + Number(auction.min_increment || 1))}`}
+          />
+          <button class="btn-bid" id="btn-bid">⚡ FAZER LANCE</button>
+          <div style="font-size:0.75rem;color:var(--muted);text-align:center;margin-top:1rem;">Incremento mínimo: {fmtBRL(auction.min_increment || 1)}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+<style>
+  @media (max-width: 768px) { .layout { grid-template-columns: 1fr !important; } }
+</style>
+
+<script define:vars={{ auctionId: id }}>
+  // Countdown
+  const cEl = document.getElementById('countdown');
+  if (cEl && cEl.dataset.expires) {
+    const target = new Date(cEl.dataset.expires).getTime();
+    const tick = () => {
+      const diff = target - Date.now();
+      if (diff <= 0) { cEl.textContent = 'ENCERRADO'; return; }
+      const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+      cEl.textContent = `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  }
+
+  // Bid submission
+  document.getElementById('btn-bid')?.addEventListener('click', async () => {
+    const amount = parseFloat((document.getElementById('bid-amount') as HTMLInputElement).value);
+    const errEl = document.getElementById('error-msg') as HTMLElement;
+    const succEl = document.getElementById('success-msg') as HTMLElement;
+    errEl.style.display = 'none'; succEl.style.display = 'none';
+
+    if (!amount || isNaN(amount)) {
+      errEl.textContent = 'Informe um valor válido para o lance.'; errEl.style.display = 'block'; return;
+    }
+    const token = localStorage.getItem('brc_token');
+    if (!token) { window.location.href = `/minha-conta/login?next=/leilao/${auctionId}`; return; }
+
+    const btn = document.getElementById('btn-bid') as HTMLButtonElement;
+    btn.textContent = 'ENVIANDO...'; btn.disabled = true;
+    try {
+      const res = await fetch(`/api/v1/auctions/${auctionId}/bids`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Erro ao registrar lance.');
+      succEl.textContent = `✅ Lance de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrado!`;
+      succEl.style.display = 'block';
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (e: any) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    } finally {
+      btn.textContent = '⚡ FAZER LANCE'; btn.disabled = false;
+    }
+  });
+</script>
+</Base>

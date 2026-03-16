@@ -1,0 +1,383 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Nova Cotação — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-purple:#bc13fe; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.4); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .main { max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+  .drop-zone { border:2px dashed var(--accent); border-radius:4px; padding:3rem 2rem; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(0,242,255,0.03); }
+  .drop-zone.drag-over { background:rgba(0,242,255,0.08); border-color:#00f2ff; box-shadow:0 0 30px rgba(0,242,255,0.15); }
+  .file-card { background:rgba(10,12,18,0.7); border:1px solid var(--border); border-radius:4px; padding:1.25rem 1.5rem; margin-bottom:0.75rem; border-left:4px solid var(--accent); position:relative; transition:border-color 0.3s; }
+  .file-card.slicing { border-color:#f59e0b; }
+  .file-card.done { border-color:#22c55e; }
+  .file-card.error { border-color:#ef4444; }
+  .input-field { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.6rem 0.75rem; color:#fff; font-family:'Inter',sans-serif; font-size:0.85rem; width:100%; box-sizing:border-box; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  .label { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .badge { display:inline-flex; align-items:center; gap:0.3rem; padding:0.25rem 0.7rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
+  .btn-primary { background:transparent; border:1px solid var(--accent); color:var(--accent); padding:0.875rem 2rem; font-weight:900; font-size:0.85rem; text-transform:uppercase; letter-spacing:3px; cursor:pointer; font-family:'Inter',sans-serif; border-radius:2px; transition:all 0.2s; }
+  .btn-primary:hover { background:rgba(0,242,255,0.1); box-shadow:0 0 20px rgba(0,242,255,0.2); }
+  .btn-secondary { background:transparent; border:1px solid var(--border); color:var(--muted); padding:0.875rem 1.5rem; font-weight:700; font-size:0.85rem; text-transform:uppercase; letter-spacing:2px; cursor:pointer; font-family:'Inter',sans-serif; border-radius:2px; transition:all 0.2s; }
+  .btn-secondary:hover { border-color:var(--muted); color:#fff; }
+  .grid3 { display:grid; grid-template-columns:2fr 1fr 1fr; gap:1rem; }
+  .total-bar { background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); padding:1.25rem 1.5rem; border-radius:4px; display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1rem; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+
+<nav style="background:rgba(10,12,18,0.95);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;height:60px;gap:1.5rem;">
+  <a href="/minha-conta" style="color:var(--muted);text-decoration:none;font-size:0.85rem;display:flex;align-items:center;gap:0.5rem;">← Voltar</a>
+  <span style="color:var(--border);">|</span>
+  <span style="font-weight:900;text-transform:uppercase;letter-spacing:2px;font-size:0.9rem;color:var(--accent);">Nova Cotação</span>
+</nav>
+
+<div class="main">
+  <div style="margin-bottom:2rem;">
+    <h1 style="font-size:1.5rem;font-weight:900;margin:0;">Montagem de <span style="color:var(--accent);">Cotação</span></h1>
+    <p style="color:var(--muted);font-size:0.875rem;margin:0.5rem 0 0;">Faça upload do(s) seu(s) modelo(s) e ajuste as configurações. O orçamento é calculado automaticamente.</p>
+  </div>
+
+  <!-- Auth banner -->
+  <div id="auth-banner" style="display:none;padding:1.25rem 1.5rem;background:rgba(66,133,244,0.06);border:1px dashed #4285F4;border-radius:4px;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <div style="font-weight:800;color:#fff;margin-bottom:0.25rem;">Identificação Necessária</div>
+      <div style="font-size:0.85rem;color:var(--muted);">Para gerar orçamentos formais, você precisa estar logado na sua conta.</div>
+    </div>
+    <a href="/minha-conta/login" style="background:white;color:#333;padding:0.65rem 1.25rem;border-radius:4px;font-weight:700;font-size:0.85rem;text-decoration:none;white-space:nowrap;">Fazer Login</a>
+  </div>
+
+  <!-- Error msg -->
+  <div id="error-msg" style="display:none;padding:1rem;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:4px;color:#f87171;margin-bottom:1.5rem;"></div>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".stl,.obj,.3mf,.zip" multiple style="display:none;" />
+    <label for="file-input" style="cursor:pointer;display:block;">
+      <div style="font-size:2.5rem;margin-bottom:0.75rem;">📤</div>
+      <div style="font-weight:700;font-size:1rem;color:#fff;">Clique aqui ou arraste seus arquivos 3D (STL, OBJ, 3MF)</div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:0.4rem;">O orçamento é calculado automaticamente após o upload ✨</div>
+    </label>
+  </div>
+
+  <!-- Manual quote link -->
+  <a href="/contato?tipo=orcamento-manual" style="display:block;text-decoration:none;margin-top:1rem;">
+    <div style="padding:1.25rem 1.5rem;border-radius:4px;background:linear-gradient(135deg,rgba(255,165,0,0.08),rgba(255,101,132,0.06));border:1.5px dashed #f59e0b;display:flex;align-items:center;justify-content:space-between;gap:1rem;cursor:pointer;transition:all 0.2s;">
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <span style="font-size:1.8rem;">📝</span>
+        <div>
+          <div style="font-weight:800;color:#b45309;font-size:0.9rem;">Não tem o arquivo 3D?</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:0.15rem;">Descreva o que precisa e envie fotos — nossa equipe prepara um orçamento personalizado.</div>
+        </div>
+      </div>
+      <span style="color:#f59e0b;font-weight:700;font-size:1.1rem;">→</span>
+    </div>
+  </a>
+
+  <!-- Files list -->
+  <div id="files-list" style="margin-top:2rem;"></div>
+
+  <!-- Total bar -->
+  <div id="total-bar" class="total-bar" style="display:none;">
+    <div>
+      <div style="font-size:0.8rem;color:var(--muted);">Estimativa total do projeto</div>
+      <div id="total-val" style="font-size:1.4rem;font-weight:900;color:#22c55e;"></div>
+    </div>
+    <div style="font-size:0.75rem;color:var(--muted);text-align:right;">Valor final pode variar conforme análise técnica.<br/>Atualizado automaticamente ✨</div>
+  </div>
+
+  <!-- Multicolor -->
+  <div id="multicolor-section" style="display:none;margin-top:1.5rem;padding:1.5rem;border:1px dashed var(--border);border-radius:4px;">
+    <label style="display:flex;align-items:flex-start;gap:1rem;cursor:pointer;">
+      <input type="checkbox" id="multicolor-check" style="width:1.2rem;height:1.2rem;margin-top:2px;accent-color:var(--neon-purple);" />
+      <div>
+        <div style="font-weight:800;color:var(--neon-purple);font-size:0.95rem;">🎨 Impressão Multi-colorida (AMS/MMU)</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-top:0.25rem;">Habilite se o seu modelo exige trocas automáticas de filamento para ficar colorido.</div>
+      </div>
+    </label>
+  </div>
+
+  <!-- Project info -->
+  <div id="submit-section" style="display:none;margin-top:2rem;">
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:1rem;margin-bottom:1.5rem;">
+      <div>
+        <label class="label" for="project-title">Nome do Projeto</label>
+        <input class="input-field" type="text" id="project-title" placeholder="Ex: Robô v2" />
+      </div>
+      <div>
+        <label class="label" for="notes">Observações</label>
+        <textarea class="input-field" id="notes" rows="2" placeholder="Detalhes especiais, acabamentos, referências..."></textarea>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div id="progress-wrap" style="display:none;margin-bottom:1rem;">
+      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:0.5rem;">Enviando arquivos...</div>
+      <div style="background:rgba(255,255,255,0.05);border-radius:999px;height:6px;overflow:hidden;">
+        <div id="progress-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--neon-purple));transition:width 0.3s;width:0%;"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <button class="btn-secondary" id="btn-review">Solicitar Análise da Equipe</button>
+      <button class="btn-primary" id="btn-submit">Enviar para Cotação ▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- State ----
+  interface FileItem {
+    id: string; file: File | null; name: string;
+    material: string; color: string; infill: number; quantity: number;
+    weight_g?: number; time_h?: number; estimated_price?: number;
+    status: 'idle' | 'slicing' | 'done' | 'error'; errorMsg?: string;
+    sliceKey?: string;
+  }
+  let items: FileItem[] = [];
+  let filaments: any[] = [];
+  let config: any = null;
+  let isMulticolor = false;
+  const debounceMap: Record<string, any> = {};
+
+  const getToken = () => localStorage.getItem('brc_token');
+
+  function fmt(v: number) {
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: config?.currency_code || 'BRL' });
+  }
+
+  function estimateLocal(weight_g: number, time_h: number, qty: number) {
+    if (!config || !weight_g) return 0;
+    const filCost = Number(config.filament_cost_per_gram) || 0.12;
+    const energy = Number(config.energy_kwh_price || 0) * 0.3;
+    const labor = Number(config.labor_hourly_rate || 0);
+    const margin = 1 + (Number(config.default_profit_margin_pct || 30) / 100);
+    const loss = 1 + (Number(config.default_loss_pct || 5) / 100);
+    return Math.max((weight_g * filCost + time_h * (energy + labor)) * loss * margin * qty, 1);
+  }
+
+  async function init() {
+    // Auth check
+    if (!getToken()) {
+      (document.getElementById('auth-banner') as HTMLElement).style.display = 'flex';
+    }
+    // Fetch config
+    try {
+      const res = await fetch('/api/v1/config/public');
+      if (res.ok) config = await res.json();
+    } catch {}
+    // Fetch filaments
+    try {
+      const res = await fetch('/api/v1/filaments/available');
+      if (res.ok) filaments = await res.json();
+    } catch {}
+    // Check if multicolor enabled in config
+    if (config?.enable_multicolor) {
+      (document.getElementById('multicolor-section') as HTMLElement).style.display = 'block';
+    }
+    document.getElementById('multicolor-check')?.addEventListener('change', (e) => {
+      isMulticolor = (e.target as HTMLInputElement).checked;
+      renderAll();
+    });
+  }
+
+  // ---- Drop Zone ----
+  const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
+  const fileInput = document.getElementById('file-input') as HTMLInputElement;
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    if (e.dataTransfer?.files) addFiles(Array.from(e.dataTransfer.files));
+  });
+  fileInput.addEventListener('change', (e) => {
+    if ((e.target as HTMLInputElement).files) addFiles(Array.from((e.target as HTMLInputElement).files!));
+  });
+
+  function addFiles(files: File[]) {
+    const valid = files.filter(f => /\.(stl|obj|3mf|zip)$/i.test(f.name));
+    valid.forEach(f => {
+      const item: FileItem = {
+        id: Math.random().toString(36).slice(2, 9),
+        file: f, name: f.name,
+        material: filaments.find(x => x.type === 'PLA')?.type || 'PLA',
+        color: filaments.find(x => x.type === 'PLA')?.color || '',
+        infill: 20, quantity: 1, status: 'idle'
+      };
+      items.push(item);
+      scheduleSlice(item.id);
+    });
+    renderAll();
+  }
+
+  function scheduleSlice(id: string) {
+    if (debounceMap[id]) clearTimeout(debounceMap[id]);
+    debounceMap[id] = setTimeout(() => autoSlice(id), 1200);
+  }
+
+  async function autoSlice(id: string) {
+    const item = items.find(i => i.id === id);
+    if (!item || !item.file) return;
+    const key = `${item.infill}|${item.quantity}`;
+    if (item.sliceKey === key && item.status !== 'idle') return;
+    item.status = 'slicing'; item.sliceKey = key;
+    renderAll();
+    try {
+      const fd = new FormData();
+      fd.append('files', item.file, item.file.name);
+      fd.append('infill', String(item.infill));
+      fd.append('quantities', JSON.stringify({ [item.file.name]: item.quantity }));
+      fd.append('material', item.material);
+      const res = await fetch('/api/slice', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro no fatiamento');
+      item.weight_g = data.weight_g; item.time_h = data.print_time_hours;
+      item.estimated_price = data.estimated_price;
+      item.status = 'done';
+    } catch (e: any) {
+      item.status = 'error'; item.errorMsg = e.message;
+    }
+    renderAll();
+  }
+
+  function renderAll() {
+    const list = document.getElementById('files-list') as HTMLDivElement;
+    list.innerHTML = items.map(item => renderCard(item)).join('');
+
+    // Bind events
+    items.forEach(item => {
+      document.getElementById(`rm-${item.id}`)?.addEventListener('click', () => {
+        items = items.filter(i => i.id !== item.id); renderAll();
+      });
+      const matSel = document.getElementById(`mat-${item.id}`) as HTMLSelectElement;
+      matSel?.addEventListener('change', () => {
+        const [mat, col] = matSel.value.split('|');
+        item.material = mat; item.color = col;
+      });
+      const infillInp = document.getElementById(`infill-${item.id}`) as HTMLInputElement;
+      infillInp?.addEventListener('input', () => {
+        item.infill = Number(infillInp.value) || 20; item.status = 'idle'; scheduleSlice(item.id);
+      });
+      document.getElementById(`qty-minus-${item.id}`)?.addEventListener('click', () => {
+        if (item.quantity > 1) { item.quantity--; item.status = 'idle'; scheduleSlice(item.id); renderAll(); }
+      });
+      document.getElementById(`qty-plus-${item.id}`)?.addEventListener('click', () => {
+        item.quantity++; item.status = 'idle'; scheduleSlice(item.id); renderAll();
+      });
+    });
+
+    // Total
+    const allDone = items.length > 0 && items.every(i => !i.file || i.status === 'done' || i.status === 'error');
+    const total = items.reduce((acc, i) => {
+      const p = i.estimated_price ?? estimateLocal(i.weight_g || 0, i.time_h || 0, i.quantity);
+      return acc + p;
+    }, 0);
+    const totalBar = document.getElementById('total-bar') as HTMLElement;
+    const submitSec = document.getElementById('submit-section') as HTMLElement;
+    if (allDone && total > 0) {
+      totalBar.style.display = 'flex';
+      (document.getElementById('total-val') as HTMLElement).textContent = fmt(total);
+    } else {
+      totalBar.style.display = 'none';
+    }
+    submitSec.style.display = items.length > 0 ? 'block' : 'none';
+  }
+
+  function renderCard(item: FileItem) {
+    const matOptions = [
+      '<option value="Qualquer|">Deixar recomendar o melhor</option>',
+      ...filaments.map(f => `<option value="${f.type}|${f.color}" ${item.material===f.type&&item.color===f.color?'selected':''}>${f.type} - ${f.color} (${f.name})</option>`)
+    ].join('');
+
+    let badge = '';
+    if (item.status === 'slicing') badge = `<span class="badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">⏳ Calculando...</span>`;
+    else if (item.status === 'done' && item.weight_g) {
+      const p = item.estimated_price ?? estimateLocal(item.weight_g, item.time_h || 0, item.quantity);
+      badge = `<span class="badge" style="background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">✅ ${item.time_h?.toFixed(1)}h · ${item.weight_g.toFixed(0)}g · ~${fmt(p)}</span>`;
+    } else if (item.status === 'error') badge = `<span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.3);" title="${item.errorMsg}">⚠️ Estimativa indisponível</span>`;
+
+    const cls = item.status === 'slicing' ? 'slicing' : item.status === 'done' ? 'done' : item.status === 'error' ? 'error' : '';
+
+    return `<div class="file-card ${cls}" id="card-${item.id}">
+      <button id="rm-${item.id}" style="position:absolute;top:1rem;right:1rem;background:rgba(239,68,68,0.1);color:#ef4444;border:none;border-radius:3px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.8rem;font-weight:700;">✕</button>
+      <div style="position:absolute;top:1rem;right:5.5rem;">${badge}</div>
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+        <div style="width:40px;height:40px;background:rgba(0,242,255,0.08);border:1px solid rgba(0,242,255,0.2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">${item.name.endsWith('.zip')?'🗂️':'🧊'}</div>
+        <div>
+          <div style="font-weight:700;font-size:0.9rem;">${item.name}</div>
+          <div style="font-size:0.75rem;color:var(--muted);">${item.file ? (item.file.size / 1024).toFixed(0) + ' KB' : 'Arquivo externo'}</div>
+        </div>
+      </div>
+      <div class="grid3">
+        <div>
+          <label class="label">Matéria Prima / Cor</label>
+          <select class="input-field" id="mat-${item.id}">${matOptions}</select>
+        </div>
+        <div>
+          <label class="label">Infill (%) <span style="color:var(--muted);font-weight:400;font-size:0.65rem;">↻ auto-calcula</span></label>
+          <input class="input-field" type="number" id="infill-${item.id}" min="0" max="99" value="${item.infill}" />
+        </div>
+        <div>
+          <label class="label">Quantidade <span style="color:var(--muted);font-weight:400;font-size:0.65rem;">↻ auto-calcula</span></label>
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <button id="qty-minus-${item.id}" style="width:2rem;height:2rem;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:3px;color:#fff;cursor:pointer;font-size:1rem;">−</button>
+            <input class="input-field" type="number" style="width:4rem;text-align:center;padding:0.5rem 0.25rem;" value="${item.quantity}" readonly />
+            <button id="qty-plus-${item.id}" style="width:2rem;height:2rem;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:3px;color:#fff;cursor:pointer;font-size:1rem;">+</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ---- Submit ----
+  async function handleSubmit(action: 'review' | 'approve') {
+    const token = getToken();
+    if (!token) { window.location.href = '/minha-conta/login'; return; }
+    if (items.length === 0) return;
+
+    const errEl = document.getElementById('error-msg') as HTMLElement;
+    errEl.style.display = 'none';
+    const progWrap = document.getElementById('progress-wrap') as HTMLElement;
+    const progBar = document.getElementById('progress-bar') as HTMLElement;
+    progWrap.style.display = 'block';
+
+    try {
+      const payloadItems = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        let file_url = null;
+        if (item.file) {
+          const fd = new FormData();
+          fd.append('file', item.file);
+          const upRes = await fetch('/api/v1/storage/upload', { method:'POST', headers:{ Authorization:`Bearer ${token}` }, body:fd });
+          const upData = await upRes.json();
+          if (!upRes.ok) throw new Error(upData.detail || `Erro no upload de ${item.name}`);
+          file_url = upData.url;
+        }
+        payloadItems.push({ file_url, name:item.name, material:item.material, color:item.color, infill:item.infill, quantity:item.quantity, weight_g:item.weight_g, time_h:item.time_h, estimated_price:item.estimated_price });
+        progBar.style.width = `${Math.round(((i+1)/items.length)*60)}%`;
+      }
+      progBar.style.width = '75%';
+      const res = await fetch('/api/v1/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+        body: JSON.stringify({ title:(document.getElementById('project-title') as HTMLInputElement).value || 'Cotação Customizada', notes:(document.getElementById('notes') as HTMLTextAreaElement).value, items:payloadItems, is_multicolor:isMulticolor, action })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Falha ao gerar cotação');
+      progBar.style.width = '100%';
+      if (data.public_token) window.location.href = `/portal/${data.public_token}`;
+      else window.location.href = '/minha-conta?success=1';
+    } catch (e: any) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+      progWrap.style.display = 'none';
+    }
+  }
+
+  document.getElementById('btn-submit')?.addEventListener('click', () => handleSubmit('approve'));
+  document.getElementById('btn-review')?.addEventListener('click', () => handleSubmit('review'));
+
+  init();
+</script>
+</Base>

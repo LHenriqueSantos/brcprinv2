@@ -1,0 +1,109 @@
+services:
+  brcprint_mysql_prod:
+    image: mysql:8.0
+    container_name: brcprint_mysql_prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-brcprint_root_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-brcprint_db}
+      MYSQL_USER: ${MYSQL_USER:-brcprint_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-brcprint_pass123}
+    # Porta 3306 oculta para o host externo por segurança
+    volumes:
+      - brcprint_mysql_prod_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./db/migrate_phase2.sql:/docker-entrypoint-initdb.d/02_migrate.sql
+      - ./db/migrate_phase9.sql:/docker-entrypoint-initdb.d/03_migrate.sql
+      - ./db/migrate_phase10.sql:/docker-entrypoint-initdb.d/04_migrate.sql
+      - ./db/migrate_phase14.sql:/docker-entrypoint-initdb.d/05_migrate.sql
+      - ./db/migrate_smtp.sql:/docker-entrypoint-initdb.d/06_migrate.sql
+      - ./db/migrate_phase_config.sql:/docker-entrypoint-initdb.d/07_migrate.sql
+      - ./db/migrate_whatsapp_config.sql:/docker-entrypoint-initdb.d/08_migrate.sql
+      - ./db/migrate_multi_upload.sql:/docker-entrypoint-initdb.d/09_migrate.sql
+      - ./db/migrate_infill.sql:/docker-entrypoint-initdb.d/10_migrate.sql
+      - ./db/migrate_printer_maintenance.sql:/docker-entrypoint-initdb.d/11_migrate.sql
+      - ./db/migrate_shipping.sql:/docker-entrypoint-initdb.d/12_migrate.sql
+      - ./db/migrate_coupons.sql:/docker-entrypoint-initdb.d/13_migrate.sql
+    networks:
+      - brcprint_prod_network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-brcprint_root_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  brcprint_app_prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: brcprint_app_prod
+    # A porta 3000 não é mais exposta diretamente para a internet. O tráfego vem pelo Caddy.
+    environment:
+      # O banco na rede Docker usa o nome do container:
+      DATABASE_URL: "mysql://${DB_USER:-brcprint_user}:${DB_PASSWORD:-brcprint_pass123}@brcprint_mysql_prod:3306/${DB_NAME:-brcprint_db}"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-your-secret-key-for-next-auth-change-in-prod}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3000}"
+      NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-http://localhost:3000}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_123}" # Sobrescrever em .env na raiz
+    depends_on:
+      brcprint_mysql_prod:
+        condition: service_healthy # Aguarda o Mysql ficar saudável antes de dar boot no Node
+    volumes:
+      - brcprint_prod_uploads:/app/public/uploads
+      - brcprint_prod_outputs:/app/public/outputs
+    networks:
+      - brcprint_prod_network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: brcprint_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - brcprint_app_prod
+    networks:
+      - brcprint_prod_network
+
+  slicer:
+    build:
+      context: ./slicer-api
+    container_name: brcprint_slicer_prod
+    restart: unless-stopped
+    # Porta interna 3005 oculta
+    networks:
+      - brcprint_prod_network
+    volumes:
+      - brcprint_prod_outputs:/app/outputs
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: brcprint_phpmyadmin_prod
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=brcprint_mysql_prod
+      - PMA_PORT=3306
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      brcprint_mysql_prod:
+        condition: service_healthy
+    networks:
+      - brcprint_prod_network
+
+volumes:
+  brcprint_mysql_prod_data:
+  brcprint_prod_uploads:
+  brcprint_prod_outputs:
+  caddy_data:
+  caddy_config:
+
+networks:
+  brcprint_prod_network:
+    driver: bridge

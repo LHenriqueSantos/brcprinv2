@@ -1,0 +1,124 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: brcprint_mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: brcprint_db
+      MYSQL_USER: brcprint_user
+      MYSQL_PASSWORD: brcprint_pass123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - brcprint_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brcprint_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=brcprint_user
+      - DB_PASSWORD=brcprint_pass123
+      - DB_NAME=brcprint_db
+      - NEXTAUTH_SECRET=brcprint_super_secret_key_2024
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - SCAD_API_URL=http://scad:3006
+      - SLICER_API_URL=http://slicer:3005
+      - TURBOPACK=0
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - brcprint_net
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    tmpfs:
+      - /app/.next/cache
+
+  auction_bot:
+    image: node:20-alpine
+    container_name: brcprint_auction_bot
+    restart: unless-stopped
+    command: >
+      sh -c '
+      echo "Bot Iniciado - Pinging /api/cron/auction-bots every 3s" &&
+      while true; do
+        wget -qO- http://nextjs:3000/api/cron/auction-bots > /dev/null 2>&1 || true;
+        sleep 3;
+      done
+      '
+    depends_on:
+      - nextjs
+    networks:
+      - brcprint_net
+
+  slicer:
+    build:
+      context: ./slicer-api
+      dockerfile: Dockerfile
+    container_name: brcprint_slicer
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    networks:
+      - brcprint_net
+    volumes:
+      - ./public/outputs:/app/outputs
+
+  scad:
+    build:
+      context: ./scad-api
+      dockerfile: Dockerfile
+    container_name: brcprint_scad
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    networks:
+      - brcprint_net
+    volumes:
+      - ./public/uploads/custom_scads:/app/outputs
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: brcprint_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - MYSQL_ROOT_PASSWORD=rootpassword123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - brcprint_net
+
+volumes:
+  mysql_data:
+
+networks:
+  brcprint_net:
+    driver: bridge

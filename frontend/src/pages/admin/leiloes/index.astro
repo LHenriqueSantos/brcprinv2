@@ -1,0 +1,158 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Leilões — Admin BRCPrint" showNav={false}>
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .sidebar { background:#070810; border-right:1px solid var(--border); padding:1.5rem 1rem; }
+  .main { padding:2rem 2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:0.875rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:0.875rem 1rem; border-bottom:1px solid var(--border); font-size:0.875rem; }
+  tr:hover td { background:rgba(255,255,255,0.015); }
+  .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .badge { padding:0.2rem 0.6rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
+  .btn { padding:0.65rem 1.25rem; border:1px solid; border-radius:2px; font-size:0.75rem; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:1px; background:transparent; transition:all 0.15s; }
+  .input-field { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.65rem 0.875rem; color:#fff; font-family:'Inter',sans-serif; font-size:0.85rem; width:100%; box-sizing:border-box; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  label.lbl { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:999; align-items:center; justify-content:center; }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:30px;" onerror="this.style.display='none'" />
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-top:0.5rem;">PAINEL ADMIN</div>
+    </div>
+    <nav>
+      <a href="/admin" class="nav-item">📊 Dashboard</a>
+      <a href="/admin/cotacoes" class="nav-item">💰 Cotações</a>
+      <a href="/admin/pedidos" class="nav-item">📦 Pedidos</a>
+      <a href="/admin/clientes" class="nav-item">👤 Clientes</a>
+      <a href="/admin/catalogo" class="nav-item">🧊 Catálogo</a>
+      <a href="/admin/impressoras" class="nav-item">🖨️ Impressoras</a>
+      <a href="/admin/filamentos" class="nav-item">🧵 Filamentos</a>
+      <a href="/admin/leiloes" class="nav-item active">⚡ Leilões</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+      <button id="btn-logout" style="width:100%;padding:0.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border-radius:2px;text-transform:uppercase;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Leilões <span style="color:var(--accent);">3D</span></h1>
+      <button class="btn" id="btn-add" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">+ NOVO LEILÃO</button>
+    </div>
+    <div id="success-msg" style="display:none;padding:0.875rem 1.25rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;color:#22c55e;margin-bottom:1.5rem;font-weight:700;"></div>
+    <div class="card-wrap">
+      <table>
+        <thead>
+          <tr><th>Título</th><th>Status</th><th>Lance Atual</th><th>Lances</th><th>Encerra em</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="auctions-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:3rem;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- New Auction Modal -->
+<div class="modal-bg" id="auction-modal">
+  <div style="background:#070810;border:1px solid var(--border);border-radius:4px;padding:2rem;width:520px;max-width:94vw;max-height:85vh;overflow-y:auto;">
+    <h3 id="modal-title" style="font-size:0.9rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin:0 0 1.5rem;">Novo Leilão</h3>
+    <div style="margin-bottom:1rem;"><label class="lbl">Título *</label><input class="input-field" id="f-title" /></div>
+    <div style="margin-bottom:1rem;"><label class="lbl">Descrição</label><textarea class="input-field" id="f-desc" rows="2"></textarea></div>
+    <div style="margin-bottom:1rem;"><label class="lbl">URL Imagem</label><input class="input-field" id="f-img" placeholder="https://..." /></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div><label class="lbl">Lance Inicial (R$) *</label><input class="input-field" type="number" id="f-start" step="0.01" /></div>
+      <div><label class="lbl">Incremento Mínimo (R$)</label><input class="input-field" type="number" id="f-inc" step="0.01" value="1" /></div>
+    </div>
+    <div style="margin-bottom:1.5rem;"><label class="lbl">Data/hora de encerramento *</label><input class="input-field" type="datetime-local" id="f-ends" /></div>
+    <div style="display:flex;gap:0.75rem;">
+      <button class="btn" id="modal-cancel2" style="color:var(--muted);border-color:var(--border);">CANCELAR</button>
+      <button class="btn" id="modal-save2" style="color:var(--accent);border-color:rgba(0,242,255,0.4);">CRIAR LEILÃO</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}`, 'Content-Type': 'application/json' }; }
+
+  async function loadAuctions() {
+    if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
+    const tbody = document.getElementById('auctions-tbody') as HTMLTableSectionElement;
+    try {
+      const res = await fetch('/api/v1/auctions', { headers: { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` } });
+      if (res.status === 401) { window.location.href = '/admin/login'; return; }
+      const auctions = await res.json();
+      if (!auctions?.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">Nenhum leilão cadastrado.</td></tr>'; return; }
+      tbody.innerHTML = auctions.map((a: any) => {
+        const statusColor = a.status === 'active' ? '#22c55e' : a.status === 'ended' ? '#6b7280' : '#ef4444';
+        const statusLabel = a.status === 'active' ? 'Ativo' : a.status === 'ended' ? 'Encerrado' : 'Cancelado';
+        const endsAt = a.ends_at ? new Date(a.ends_at).toLocaleString('pt-BR') : '—';
+        const currentBid = a.current_bid ? `R$ ${Number(a.current_bid).toFixed(2).replace('.',',')}` : `R$ ${Number(a.start_bid).toFixed(2).replace('.',',')} (inicial)`;
+        return `<tr>
+          <td style="font-weight:700;">${a.title}</td>
+          <td><span class="badge" style="background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">${statusLabel}</span></td>
+          <td style="font-weight:700;color:var(--accent);">${currentBid}</td>
+          <td style="color:var(--muted);">${a.total_bids || 0}</td>
+          <td style="font-size:0.8rem;color:var(--muted);">${endsAt}</td>
+          <td style="display:flex;gap:0.4rem;">
+            <a href="/leilao/${a.id}" target="_blank" class="btn" style="font-size:0.7rem;color:var(--accent);border-color:rgba(0,242,255,0.3);text-decoration:none;padding:0.3rem 0.75rem;">VER</a>
+            ${a.status === 'active' ? `<button class="btn end-btn" data-id="${a.id}" style="font-size:0.7rem;color:#f87171;border-color:rgba(239,68,68,0.3);padding:0.3rem 0.75rem;">ENCERRAR</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+
+      document.querySelectorAll('.end-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Encerrar este leilão?')) return;
+          const id = (btn as HTMLElement).dataset.id;
+          await fetch(`/api/v1/auctions/${id}`, {
+            method: 'PATCH',
+            headers: headers(),
+            body: JSON.stringify({ status: 'ended' }),
+          });
+          showMsg('Leilão encerrado!');
+          loadAuctions();
+        });
+      });
+    } catch { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#f87171;padding:2rem;">Erro ao carregar leilões.</td></tr>'; }
+  }
+
+  document.getElementById('btn-add')?.addEventListener('click', () => { (document.getElementById('auction-modal') as HTMLElement).style.display = 'flex'; });
+  document.getElementById('modal-cancel2')?.addEventListener('click', () => { (document.getElementById('auction-modal') as HTMLElement).style.display = 'none'; });
+
+  document.getElementById('modal-save2')?.addEventListener('click', async () => {
+    const body = {
+      title: (document.getElementById('f-title') as HTMLInputElement).value,
+      description: (document.getElementById('f-desc') as HTMLTextAreaElement).value || null,
+      image_url: (document.getElementById('f-img') as HTMLInputElement).value || null,
+      start_bid: parseFloat((document.getElementById('f-start') as HTMLInputElement).value),
+      min_increment: parseFloat((document.getElementById('f-inc') as HTMLInputElement).value) || 1,
+      ends_at: (document.getElementById('f-ends') as HTMLInputElement).value,
+      status: 'active',
+    };
+    if (!body.title || !body.start_bid || !body.ends_at) { alert('Preencha os campos obrigatórios.'); return; }
+    const res = await fetch('/api/v1/auctions', { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+    if (res.ok) { (document.getElementById('auction-modal') as HTMLElement).style.display = 'none'; showMsg('Leilão criado!'); loadAuctions(); }
+    else { const e = await res.json(); alert(e.detail || 'Erro ao criar leilão.'); }
+  });
+
+  function showMsg(msg: string) {
+    const el = document.getElementById('success-msg') as HTMLElement;
+    el.textContent = '✅ ' + msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+
+  document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
+  loadAuctions();
+</script>
+</Base>

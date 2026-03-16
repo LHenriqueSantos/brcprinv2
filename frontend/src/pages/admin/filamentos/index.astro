@@ -1,0 +1,102 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Filamentos — Admin BRCPrint" showNav={false}>
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .sidebar { background:#070810; border-right:1px solid var(--border); padding:1.5rem 1rem; }
+  .main { padding:2rem 2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:0.875rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:0.875rem 1rem; border-bottom:1px solid var(--border); font-size:0.875rem; }
+  tr:hover td { background:rgba(255,255,255,0.015); }
+  .card-wrap { background:#070810; border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .stock-bar { height:6px; border-radius:3px; background:rgba(255,255,255,0.08); }
+  .stock-fill { height:6px; border-radius:3px; }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:30px;" onerror="this.style.display='none'" />
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-top:0.5rem;">PAINEL ADMIN</div>
+    </div>
+    <nav>
+      <a href="/admin" class="nav-item">📊 Dashboard</a>
+      <a href="/admin/cotacoes" class="nav-item">💰 Cotações</a>
+      <a href="/admin/pedidos" class="nav-item">📦 Pedidos</a>
+      <a href="/admin/clientes" class="nav-item">👤 Clientes</a>
+      <a href="/admin/catalogo" class="nav-item">🧊 Catálogo</a>
+      <a href="/admin/impressoras" class="nav-item">🖨️ Impressoras</a>
+      <a href="/admin/filamentos" class="nav-item active">🧵 Filamentos</a>
+      <a href="/admin/leiloes" class="nav-item">⚡ Leilões</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+      <button id="btn-logout" style="width:100%;padding:0.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border-radius:2px;text-transform:uppercase;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Filamentos</h1>
+      <a href="/admin/filamentos/novo" style="padding:0.65rem 1.25rem;border:1px solid rgba(0,242,255,0.4);color:var(--accent);text-decoration:none;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:2px;">+ NOVO FILAMENTO</a>
+    </div>
+    <div class="card-wrap">
+      <table>
+        <thead>
+          <tr><th>Cor</th><th>Nome/Marca</th><th>Tipo</th><th>Custo/kg</th><th>Estoque</th><th>Min. Estoque</th></tr>
+        </thead>
+        <tbody id="filaments-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:3rem;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` }; }
+
+  async function loadFilaments() {
+    if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
+    const tbody = document.getElementById('filaments-tbody') as HTMLTableSectionElement;
+    try {
+      const res = await fetch('/api/v1/filaments', { headers: headers() });
+      if (res.status === 401) { window.location.href = '/admin/login'; return; }
+      const data = await res.json();
+      const filaments = data.items || data || [];
+      if (filaments.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">Nenhum filamento cadastrado.</td></tr>'; return; }
+      tbody.innerHTML = filaments.map((f: any) => {
+        const stock = Number(f.stock_g || 0);
+        const minStock = Number(f.min_stock_g || 500);
+        const pct = Math.min(100, Math.round((stock / (minStock * 4)) * 100));
+        const stockColor = stock < minStock ? '#ef4444' : stock < minStock * 2 ? '#f59e0b' : '#22c55e';
+        const color = f.color_hex || f.hex_color || '#888';
+        return `<tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div style="width:28px;height:28px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.15);flex-shrink:0;"></div>
+              <span style="font-size:0.75rem;color:var(--muted);">${color}</span>
+            </div>
+          </td>
+          <td><div style="font-weight:700;">${f.name || f.brand || '—'}</div></td>
+          <td><span style="font-size:0.75rem;background:rgba(0,242,255,0.08);color:var(--accent);padding:0.2rem 0.6rem;border-radius:2px;">${f.material_type || f.type || 'PLA'}</span></td>
+          <td>R$ ${f.cost_per_kg ? Number(f.cost_per_kg).toFixed(2).replace('.',',') : '—'}</td>
+          <td>
+            <div style="font-size:0.8rem;font-weight:700;color:${stockColor};margin-bottom:0.4rem;">${stock.toFixed(0)}g</div>
+            <div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${stockColor};"></div></div>
+          </td>
+          <td style="color:var(--muted);font-size:0.85rem;">${minStock.toFixed(0)}g</td>
+        </tr>`;
+      }).join('');
+    } catch { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#f87171;padding:2rem;">Erro ao carregar filamentos.</td></tr>'; }
+  }
+
+  document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
+  loadFilaments();
+</script>
+</Base>

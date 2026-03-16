@@ -1,0 +1,21 @@
+-- Adicionar Endereço de Envio Completo e Documento do Recebedor (Phase 72)
+
+ALTER TABLE quote_requests
+ADD COLUMN client_address VARCHAR(255) DEFAULT NULL,
+ADD COLUMN client_address_number VARCHAR(20) DEFAULT NULL,
+ADD COLUMN client_address_comp VARCHAR(100) DEFAULT NULL,
+ADD COLUMN client_neighborhood VARCHAR(100) DEFAULT NULL,
+ADD COLUMN client_city VARCHAR(100) DEFAULT NULL,
+ADD COLUMN client_state VARCHAR(2) DEFAULT NULL,
+ADD COLUMN client_document VARCHAR(20) DEFAULT NULL,
+ADD COLUMN client_name VARCHAR(150) DEFAULT NULL;
+
+ALTER TABLE quotes
+ADD COLUMN client_address VARCHAR(255) DEFAULT NULL,
+ADD COLUMN client_address_number VARCHAR(20) DEFAULT NULL,
+ADD COLUMN client_address_comp VARCHAR(100) DEFAULT NULL,
+ADD COLUMN client_neighborhood VARCHAR(100) DEFAULT NULL,
+ADD COLUMN client_city VARCHAR(100) DEFAULT NULL,
+ADD COLUMN client_state VARCHAR(2) DEFAULT NULL,
+ADD COLUMN client_document VARCHAR(20) DEFAULT NULL,
+ADD COLUMN client_name VARCHAR(150) DEFAULT NULL;

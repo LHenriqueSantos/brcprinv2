@@ -1,0 +1,95 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Impressoras — Admin BRCPrint" showNav={false}>
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .sidebar { background:#070810; border-right:1px solid var(--border); padding:1.5rem 1rem; }
+  .main { padding:2rem 2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.875rem; color:var(--muted); text-decoration:none; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; border-radius:3px; transition:all 0.2s; margin-bottom:0.2rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.06); color:var(--accent); }
+  .printer-card { background:#070810; border:1px solid var(--border); border-radius:4px; padding:1.5rem; transition:border-color 0.2s; }
+  .printer-card:hover { border-color:rgba(0,242,255,0.3); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.25rem; }
+  .stat-row { display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.8rem; }
+  .stat-row:last-child { border:none; }
+  .badge { padding:0.2rem 0.6rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:30px;" onerror="this.style.display='none'" />
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-top:0.5rem;">PAINEL ADMIN</div>
+    </div>
+    <nav>
+      <a href="/admin" class="nav-item">📊 Dashboard</a>
+      <a href="/admin/cotacoes" class="nav-item">💰 Cotações</a>
+      <a href="/admin/pedidos" class="nav-item">📦 Pedidos</a>
+      <a href="/admin/clientes" class="nav-item">👤 Clientes</a>
+      <a href="/admin/catalogo" class="nav-item">🧊 Catálogo</a>
+      <a href="/admin/impressoras" class="nav-item active">🖨️ Impressoras</a>
+      <a href="/admin/filamentos" class="nav-item">🧵 Filamentos</a>
+      <a href="/admin/leiloes" class="nav-item">⚡ Leilões</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+      <button id="btn-logout" style="width:100%;padding:0.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;border-radius:2px;text-transform:uppercase;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h1 style="font-size:1.4rem;font-weight:900;margin:0;text-transform:uppercase;">Impressoras <span style="color:var(--accent);">3D</span></h1>
+      <a href="/admin/impressoras/nova" style="padding:0.65rem 1.25rem;border:1px solid rgba(0,242,255,0.4);color:var(--accent);text-decoration:none;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:2px;transition:all 0.15s;">+ NOVA IMPRESSORA</a>
+    </div>
+    <div class="grid" id="printers-grid">
+      <div style="text-align:center;padding:4rem;color:var(--muted);">Carregando...</div>
+    </div>
+  </main>
+</div>
+
+<script>
+  function headers() { return { Authorization: `Bearer ${localStorage.getItem('brc_admin_token')}` }; }
+
+  async function loadPrinters() {
+    if (!localStorage.getItem('brc_admin_token')) { window.location.href = '/admin/login'; return; }
+    const grid = document.getElementById('printers-grid') as HTMLElement;
+    try {
+      const res = await fetch('/api/v1/printers', { headers: headers() });
+      if (res.status === 401) { window.location.href = '/admin/login'; return; }
+      const data = await res.json();
+      const printers = data.items || data || [];
+      if (printers.length === 0) {
+        grid.innerHTML = '<div style="text-align:center;padding:4rem;color:var(--muted);">Nenhuma impressora cadastrada.</div>';
+        return;
+      }
+      grid.innerHTML = printers.map((p: any) => {
+        const statusColor = p.status === 'active' || p.is_active ? '#22c55e' : p.status === 'printing' ? '#8b5cf6' : '#6b7280';
+        const statusLabel = p.status === 'active' ? 'Ativa' : p.status === 'printing' ? 'Imprimindo' : p.status === 'maintenance' ? 'Manutenção' : p.status || (p.is_active ? 'Ativa' : 'Inativa');
+        return `
+          <div class="printer-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+              <div>
+                <div style="font-size:1.5rem;">🖨️</div>
+                <div style="font-weight:900;font-size:0.95rem;margin-top:0.4rem;">${p.name}</div>
+                <div style="font-size:0.75rem;color:var(--muted);">${p.model || p.brand || ''}</div>
+              </div>
+              <span class="badge" style="background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">${statusLabel}</span>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:1rem;">
+              <div class="stat-row"><span style="color:var(--muted);">Potência</span><span>${p.power_watts || p.printer_power_watts || '—'} W</span></div>
+              <div class="stat-row"><span style="color:var(--muted);">Custo/hora</span><span>${p.cost_per_hour ? `R$ ${Number(p.cost_per_hour).toFixed(2).replace('.',',')}` : '—'}</span></div>
+              <div class="stat-row"><span style="color:var(--muted);">Volume (mm³)</span><span>${p.build_volume_x ? `${p.build_volume_x}×${p.build_volume_y}×${p.build_volume_z}` : '—'}</span></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch { grid.innerHTML = '<div style="text-align:center;padding:3rem;color:#f87171;">Erro ao carregar impressoras.</div>'; }
+  }
+
+  document.getElementById('btn-logout')?.addEventListener('click', () => { localStorage.removeItem('brc_admin_token'); window.location.href = '/admin/login'; });
+  loadPrinters();
+</script>
+</Base>

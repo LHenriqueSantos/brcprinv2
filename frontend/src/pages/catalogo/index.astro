@@ -1,0 +1,102 @@
+---
+import Base from '../../layouts/Base.astro';
+
+let products: any[] = [];
+let categories: string[] = [];
+try {
+  const API = import.meta.env.API_INTERNAL_URL || 'http://fastapi:8000';
+  const res = await fetch(`${API}/api/v1/catalog`);
+  if (res.ok) {
+    const raw = await res.json();
+    // The API may return an array directly, or { items: [] } or { data: [] }
+    const arr = Array.isArray(raw) ? raw : raw.items ?? raw.data ?? raw.products ?? [];
+    products = arr;
+    const cats = [...new Set<string>(products.map((p: any) => p.category).filter(Boolean))];
+    categories = ['Todos', ...cats];
+  }
+} catch {}
+---
+<Base title="Catálogo — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .hero { padding:5rem 2rem 3rem; text-align:center; background:linear-gradient(180deg,rgba(0,242,255,0.04) 0%,transparent 100%); border-bottom:1px solid var(--border); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:1.5rem; padding:3rem 2rem; max-width:1200px; margin:0 auto; }
+  .product-card { background:rgba(10,12,18,0.7); border:1px solid var(--border); border-radius:4px; overflow:hidden; transition:all 0.25s; cursor:pointer; text-decoration:none; color:inherit; }
+  .product-card:hover { border-color:var(--accent); box-shadow:0 0 30px rgba(0,242,255,0.1); transform:translateY(-2px); }
+  .product-img { width:100%; height:200px; object-fit:cover; background:#0d0f14; display:flex; align-items:center; justify-content:center; font-size:4rem; }
+  .product-body { padding:1.25rem; }
+  .price { font-size:1.3rem; font-weight:900; color:var(--accent); }
+  .badge-mat { display:inline-block; padding:0.2rem 0.6rem; background:rgba(0,242,255,0.08); border:1px solid rgba(0,242,255,0.2); border-radius:999px; font-size:0.7rem; font-weight:700; color:var(--accent); }
+  .filter-bar { display:flex; gap:0.75rem; flex-wrap:wrap; padding:2rem 2rem 0; max-width:1200px; margin:0 auto; }
+  .filter-btn { padding:0.5rem 1.25rem; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:0.8rem; font-weight:700; cursor:pointer; border-radius:2px; font-family:'Inter',sans-serif; transition:all 0.2s; text-transform:uppercase; letter-spacing:1px; }
+  .filter-btn.active, .filter-btn:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+
+<div class="hero">
+  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:var(--accent);margin-bottom:1rem;">// CATÁLOGO DE PRODUTOS</div>
+  <h1 style="font-size:3rem;font-weight:900;margin:0 0 1rem;">Modelos em <span style="color:var(--accent);">Estoque</span></h1>
+  <p style="color:var(--muted);font-size:1.1rem;max-width:500px;margin:0 auto;">Peças prontas para imprimir com qualidade de fábrica. Clique e envie diretamente para cotação.</p>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar" id="filter-bar">
+  {categories.map(cat => (
+    <button class={`filter-btn ${cat === 'Todos' ? 'active' : ''}`} data-filter={cat}>{cat}</button>
+  ))}
+</div>
+
+<!-- Grid -->
+{products.length === 0 ? (
+  <div style="text-align:center;padding:6rem 2rem;color:var(--muted);">
+    <p style="font-size:3rem;margin:0 0 1rem;">📭</p>
+    <h3 style="color:#fff;margin:0 0 0.5rem;">Catálogo em construção</h3>
+    <p>Novos modelos sendo adicionados em breve!</p>
+  </div>
+) : (
+  <div class="grid" id="product-grid">
+    {products.map((p: any) => (
+      <a class="product-card" href={`/minha-conta/nova-cotacao?catalog_id=${p.id}&stl_url=${encodeURIComponent(p.file_url)}&name=${encodeURIComponent(p.name)}`} data-category={p.category || 'Outros'}>
+        {p.image_url ? (
+          <img src={p.image_url} alt={p.name} class="product-img" style="font-size:1rem;" />
+        ) : (
+          <div class="product-img">🧊</div>
+        )}
+        <div class="product-body">
+          <div style="margin-bottom:0.5rem;">
+            {p.material && <span class="badge-mat">{p.material}</span>}
+          </div>
+          <h3 style="font-size:1rem;font-weight:800;margin:0 0 0.5rem;">{p.name}</h3>
+          {p.description && <p style="font-size:0.8rem;color:var(--muted);margin:0 0 1rem;">{p.description}</p>}
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            {p.base_price ? (
+              <span class="price">R$ {Number(p.base_price).toFixed(2).replace('.', ',')}</span>
+            ) : (
+              <span style="font-size:0.85rem;color:var(--muted);">Preço sob consulta</span>
+            )}
+            <span style="font-size:0.75rem;font-weight:700;color:var(--accent);border:1px solid var(--accent);padding:0.25rem 0.75rem;border-radius:2px;">PEDIR →</span>
+          </div>
+        </div>
+      </a>
+    ))}
+  </div>
+)}
+
+<script>
+  // Client-side filter
+  const btns = document.querySelectorAll('.filter-btn') as NodeListOf<HTMLButtonElement>;
+  const cards = document.querySelectorAll('.product-card') as NodeListOf<HTMLElement>;
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter;
+      cards.forEach(card => {
+        const show = filter === 'Todos' || card.dataset.category === filter;
+        (card as HTMLElement).style.display = show ? 'block' : 'none';
+      });
+    });
+  });
+</script>
+</Base>

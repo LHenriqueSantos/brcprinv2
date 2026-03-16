@@ -1,0 +1,47 @@
+# Multi-stage build para otimização de imagem Docker
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Instalar dependências necessárias para build nativo (ex: lib gl para node-stl)
+RUN apk add --no-cache libc6-compat python3 make g++
+
+# Dependências
+COPY package.json package-lock.json ./
+RUN npm install --legacy-peer-deps
+
+# Código fonte
+COPY . .
+
+# Build do Next.js (prerender, prisma, ts)
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Stage de Produção (Imagem magra)
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Usuário não-root para segurança
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Setando ENV de produção
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+
+# Copiar build gerado
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Diretório base para Uploads STL
+RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public
+
+USER nextjs
+
+EXPOSE 3000
+
+# O standalone output de build gera um server.js próprio
+CMD ["node", "server.js"]

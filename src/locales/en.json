@@ -1,0 +1,99 @@
+{
+  "portal_title": "Quote #{{id}}",
+  "portal_welcome": "Hello, {{name}}! Your quote is ready.",
+  "error_not_found": "Quote not found",
+  "error_not_found_msg": "The link may be expired or invalid.",
+  "status": {
+    "pending": "Pending Analysis",
+    "quoted": "Quoted",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "counter_offer": "Counter Offer",
+    "in_production": "In Production",
+    "delivered": "Delivered",
+    "awaiting_payment": "Awaiting Payment"
+  },
+  "valid_until": "Valid until {{date}}",
+  "expired": "Expired Quote",
+  "expired_msg": "The validity period has expired. Contact us for a new quote.",
+  "viewer_title": "3D Model Preview",
+  "summary": {
+    "title": "Order Summary",
+    "quantity": "Total Quantity",
+    "subtotal": "Subtotal",
+    "per_unit": "Base Price per Unit",
+    "total_lot": "Grand Total of Order",
+    "disclaimer": "The price per unit is the base value. Taxes and shipping are added to the grand total."
+  },
+  "quote": {
+    "unit": "item(s)",
+    "id_label": "Order",
+    "status_label": "Quote Status",
+    "untitled": "Untitled",
+    "print_params": "Print Parameters",
+    "valid_until": "Valid until...",
+    "printer": "Printer",
+    "filament": "Filament",
+    "weight": "Weight",
+    "print_time": "Estimated Time",
+    "composition": "Cost Breakdown",
+    "labor": "Labor",
+    "material": "Material (Filament)",
+    "energy": "Electricity",
+    "shipping_options": "Shipping Options",
+    "extras_label": "Additional Services",
+    "tax": "Taxes"
+  },
+  "composition_title": "Price Breakdown",
+  "composition": {
+    "hours": "⏱️ Print hours",
+    "weight": "🧵 Material used",
+    "energy": "⚡ Electricity",
+    "labor": "👷 Labor"
+  },
+  "shipping": "Shipping details",
+  "shipping_options": "Shipping Options",
+  "shipping_select": "Select an option...",
+  "extras_title": "Post-Processing Services (Upsells)",
+  "total_price": "TOTAL PRICE WITH SHIPPING",
+  "quantity_line": "{{qty}} item(s) + shipping and extras",
+  "actions": {
+    "title": "What would you like to do?",
+    "approve_pay": "Approve and Pay",
+    "approve": "Approve Quote",
+    "counter": "Make a Counter Offer",
+    "counter_offer": "Make a Counter Offer",
+    "reject": "Reject",
+    "reject_confirm": "Are you sure you want to reject this quote?",
+    "send_proposal": "Send Proposal",
+    "back": "Back",
+    "download_pdf": "Download PDF of this quote",
+    "download_3d_file": "Download 3D File",
+    "files": "Files",
+    "download": "Download",
+    "processing": "Please wait...",
+    "proposed_price": "Proposed price per unit",
+    "notes": "Reason (optional)",
+    "notes_placeholder": "Explain your proposal...",
+    "send": "Send Proposal",
+    "cancel": "Cancel"
+  },
+  "counter_form": {
+    "title": "Your Counter Offer",
+    "price_label": "Proposed price per unit ({{symbol}})",
+    "notes_label": "Reason (optional)",
+    "notes_placeholder": "Explain your proposal..."
+  },
+  "done": {
+    "approved": "Quote Approved!",
+    "counter": "Proposal Sent!",
+    "rejected": "Quote Rejected",
+    "msg_approved": "We received your approval! We will contact you soon.",
+    "msg_counter": "We received your proposal! We will review it and get back to you soon.",
+    "msg_rejected": "We received your response. Thank you!"
+  },
+  "chat_title": "Message Center",
+  "footer": {
+    "tagline": "3D Printing Pricing System"
+  }
+}

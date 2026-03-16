@@ -1,0 +1,13 @@
+{
+  "name": "brcprint-slicer",
+  "version": "1.0.0",
+  "description": "Headless Slicer Microservice for BRCPrint",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}

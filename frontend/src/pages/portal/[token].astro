@@ -1,0 +1,189 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const { token } = Astro.params;
+let quote: any = null;
+let error = '';
+
+try {
+  const API = import.meta.env.API_INTERNAL_URL || 'http://fastapi:8000';
+  const res = await fetch(`${API}/api/v1/quotes/public/${token}`);
+  if (res.ok) quote = await res.json();
+  else error = 'Cotação não encontrada ou expirada.';
+} catch {
+  error = 'Erro ao carregar cotação.';
+}
+
+function fmtBRL(v: number) {
+  return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+const total = quote ? (Number(quote.final_price || 0) + Number(quote.tax_amount || 0) + Number(quote.shipping_cost || 0)) : 0;
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  pending: { label: 'Aguardando Análise', color: '#f59e0b' },
+  quoted: { label: 'Orçamento Pronto', color: '#3b82f6' },
+  approved: { label: 'Aprovado — Aguardando Pagamento', color: '#10b981' },
+  printing: { label: 'Em Produção 🖨️', color: '#8b5cf6' },
+  shipped: { label: 'Enviado 📦', color: '#06b6d4' },
+  delivered: { label: 'Entregue ✅', color: '#22c55e' },
+  rejected: { label: 'Recusado', color: '#ef4444' },
+};
+const statusInfo = quote ? (STATUS_MAP[quote.status] || { label: quote.status, color: '#888' }) : null;
+---
+
+<Base title={`Portal da Cotação — BRCPrint`}>
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; min-height:100vh; }
+  .wrap { max-width:860px; margin:0 auto; padding:3rem 1.5rem; }
+  .card { background:rgba(10,12,18,0.7); border:1px solid var(--border); border-radius:4px; padding:2rem; margin-bottom:1.5rem; }
+  .label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:0.75rem 1rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:0.75rem 1rem; border-bottom:1px solid var(--border); font-size:0.9rem; }
+  tr:last-child td { border-bottom:none; }
+  .btn-pix { display:block; width:100%; padding:1.25rem; background:linear-gradient(135deg,#00b548,#00d455); border:none; color:#000; font-weight:900; font-size:1rem; text-transform:uppercase; letter-spacing:2px; cursor:pointer; border-radius:4px; text-align:center; font-family:'Inter',sans-serif; transition:all 0.2s; }
+  .btn-pix:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(0,180,70,0.4); }
+  .btn-reject { display:block; width:100%; padding:1rem; background:transparent; border:1px solid rgba(239,68,68,0.4); color:#f87171; font-weight:700; font-size:0.9rem; cursor:pointer; border-radius:4px; font-family:'Inter',sans-serif; margin-top:0.75rem; text-transform:uppercase; letter-spacing:1px; }
+</style>
+
+<div class="wrap">
+  {error ? (
+    <div style="text-align:center;padding:6rem 2rem;">
+      <p style="font-size:3rem;margin:0 0 1rem;">❌</p>
+      <h2 style="color:#fff;">{error}</h2>
+      <a href="/" style="color:var(--accent);text-decoration:none;">← Voltar para o início</a>
+    </div>
+  ) : quote ? (
+    <>
+      <!-- Status Header -->
+      <div style="text-align:center;margin-bottom:3rem;">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:var(--muted);margin-bottom:0.75rem;">Portal de Cotação</div>
+        <h1 style="font-size:1.8rem;font-weight:900;margin:0 0 1rem;">{quote.title || 'Sua Cotação'}</h1>
+        <span style={`display:inline-block;padding:0.5rem 1.5rem;background:${statusInfo?.color}22;color:${statusInfo?.color};border:1px solid ${statusInfo?.color}44;font-weight:800;font-size:0.85rem;text-transform:uppercase;letter-spacing:2px;border-radius:999px;`}>
+          {statusInfo?.label}
+        </span>
+      </div>
+
+      <!-- Items -->
+      <div class="card">
+        <h3 style="font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 1.5rem;color:var(--accent);">Itens do Pedido</h3>
+        <table>
+          <thead>
+            <tr><th>Arquivo</th><th>Material</th><th>Qtd</th><th>Infill</th><th>Peso</th><th>Tempo</th></tr>
+          </thead>
+          <tbody>
+            {(quote.items || []).map((item: any) => (
+              <tr>
+                <td style="font-weight:700;">{item.name || item.file_url?.split('/').pop()}</td>
+                <td>{item.material || '—'} <span style="color:var(--muted);font-size:0.8rem;">{item.color || ''}</span></td>
+                <td>{item.quantity || 1}</td>
+                <td>{item.infill || 20}%</td>
+                <td>{item.weight_g ? `${Number(item.weight_g).toFixed(0)}g` : '—'}</td>
+                <td>{item.time_h ? `${Number(item.time_h).toFixed(1)}h` : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Price Breakdown -->
+      {quote.final_price && (
+        <div class="card">
+          <h3 style="font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 1.5rem;color:var(--accent);">Resumo Financeiro</h3>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--muted);">Subtotal</span>
+              <span style="font-weight:700;">{fmtBRL(quote.final_price)}</span>
+            </div>
+            {quote.tax_amount && Number(quote.tax_amount) > 0 && (
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--muted);">Impostos</span>
+                <span>{fmtBRL(quote.tax_amount)}</span>
+              </div>
+            )}
+            {quote.shipping_cost && Number(quote.shipping_cost) > 0 && (
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--muted);">Frete</span>
+                <span>{fmtBRL(quote.shipping_cost)}</span>
+              </div>
+            )}
+            <div style="border-top:1px solid var(--border);padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:900;font-size:1.1rem;">TOTAL</span>
+              <span style="font-size:1.8rem;font-weight:900;color:var(--neon-green);">{fmtBRL(total)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <!-- Notes -->
+      {quote.notes && (
+        <div class="card">
+          <div class="label" style="margin-bottom:0.75rem;">Observações</div>
+          <p style="color:var(--muted);line-height:1.7;margin:0;">{quote.notes}</p>
+        </div>
+      )}
+
+      <!-- Actions -->
+      {quote.status === 'quoted' && (
+        <div class="card" style="border-top:3px solid var(--neon-green);">
+          <h3 style="font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 0.5rem;color:var(--neon-green);">Sua cotação está pronta!</h3>
+          <p style="color:var(--muted);font-size:0.9rem;margin:0 0 1.5rem;">Revise os itens acima e, se estiver tudo certo, clique em <strong>Aprovar e Pagar</strong> para iniciar a produção.</p>
+          <button class="btn-pix" id="btn-pay">
+            ⚡ APROVAR E PAGAR VIA PIX — {fmtBRL(total)}
+          </button>
+          <button class="btn-reject" id="btn-reject">Solicitar revisão / cancelar</button>
+        </div>
+      )}
+
+      {quote.pix_code && quote.status === 'approved' && (
+        <div class="card" style="border-top:3px solid #00b548;text-align:center;">
+          <h3 style="color:#00d455;font-weight:900;margin:0 0 1rem;">PIX Gerado! Escaneie o QR Code</h3>
+          {quote.pix_qr_image && (
+            <img src={quote.pix_qr_image} alt="QR Code PIX" style="width:200px;height:200px;margin:0 auto 1.5rem;display:block;border:4px solid #00b548;padding:8px;background:#fff;" />
+          )}
+          <div style="background:rgba(255,255,255,0.05);padding:1rem;border-radius:4px;word-break:break-all;font-size:0.8rem;font-family:monospace;color:var(--accent);margin-bottom:1rem;">{quote.pix_code}</div>
+          <button id="copy-pix" style="padding:0.65rem 2rem;background:transparent;border:1px solid #00b548;color:#00d455;font-weight:700;cursor:pointer;border-radius:2px;font-family:'Inter',sans-serif;font-size:0.85rem;">📋 Copiar código PIX</button>
+        </div>
+      )}
+    </>
+  ) : null}
+</div>
+
+<script define:vars={{ token, quote }}>
+  // Approve
+  document.getElementById('btn-pay')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-pay');
+    if (btn) btn.textContent = 'Processando...';
+    const clientToken = localStorage.getItem('brc_token') || '';
+    try {
+      const res = await fetch(`/api/v1/quotes/public/${token}/approve`, {
+        method: 'POST',
+        headers: authHeader(clientToken)
+      });
+      const data = await res.json();
+      if (res.ok) window.location.reload();
+      else alert(data.detail || 'Erro ao aprovar.');
+    } catch { alert('Erro de conexão.'); if (btn) btn.textContent = '⚡ APROVAR E PAGAR VIA PIX'; }
+  });
+
+  document.getElementById('btn-reject')?.addEventListener('click', async () => {
+    if (!confirm('Deseja solicitar revisão desta cotação?')) return;
+    const clientToken = localStorage.getItem('brc_token') || '';
+    await fetch(`/api/v1/quotes/public/${token}/reject`, { method:'POST', headers: authHeader(clientToken) });
+    window.location.reload();
+  });
+
+  document.getElementById('copy-pix')?.addEventListener('click', () => {
+    if (quote?.pix_code) {
+      navigator.clipboard.writeText(quote.pix_code);
+      const btn = document.getElementById('copy-pix');
+      if (btn) { btn.textContent = '✅ Copiado!'; setTimeout(() => btn.textContent = '📋 Copiar código PIX', 2000); }
+    }
+  });
+
+  function authHeader(tok: string) {
+    return tok ? { Authorization: `Bearer ${tok}` } : {};
+  }
+</script>
+</Base>
