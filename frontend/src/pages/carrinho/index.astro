@@ -1,0 +1,149 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Meu Carrinho — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .container { max-width:1100px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+  .card { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; padding:1.5rem; }
+  .item-row { display:flex; gap:1.5rem; padding:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:4px; align-items:center; margin-bottom:1rem; }
+  .qty-ctrl { display:flex; align-items:center; gap:0.75rem; background:rgba(10,12,18,0.8); padding:0.25rem 0.5rem; border-radius:4px; border:1px solid var(--border); }
+  .qty-btn { border:none; background:transparent; color:#fff; font-size:1.1rem; cursor:pointer; padding:0.2rem 0.5rem; line-height:1; transition:color 0.2s; }
+  .qty-btn:hover { color:var(--accent); }
+  .btn-cyber { display:inline-block; padding:1rem 2rem; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.9rem; text-transform:uppercase; letter-spacing:3px; text-decoration:none; border-radius:2px; transition:all 0.2s; cursor:pointer; background:transparent; font-family:'Inter',sans-serif; width:100%; text-align:center; box-sizing:border-box; }
+  .btn-cyber:hover { background:rgba(0,242,255,0.1); box-shadow:0 0 20px rgba(0,242,255,0.2); }
+  .btn-ghost { border:1px solid var(--border); color:var(--muted); }
+  .btn-ghost:hover { border-color:var(--muted); color:#fff; }
+  .btn-danger { border-color:rgba(239,68,68,0.4); color:#f87171; }
+  .btn-danger:hover { background:rgba(239,68,68,0.1); }
+  .icon-box { width:80px; height:80px; border-radius:4px; background:rgba(0,242,255,0.05); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:2rem; flex-shrink:0; }
+</style>
+
+<div class="container">
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+    <h1 style="font-size:2rem;font-weight:900;margin:0;">Meu <span style="color:var(--accent);">Carrinho</span></h1>
+    <button id="clear-btn" class="btn-cyber btn-danger" style="width:auto;padding:0.5rem 1.25rem;font-size:0.75rem;">Esvaziar Carrinho</button>
+  </div>
+
+  <!-- Empty state -->
+  <div id="cart-empty" style="display:none;text-align:center;padding:6rem 2rem;">
+    <div style="font-size:4rem;margin-bottom:1.5rem;">🖨️</div>
+    <h2 style="font-size:1.75rem;font-weight:900;margin:0 0 1rem;">Carrinho Vazio</h2>
+    <p style="color:var(--muted);margin:0 0 2rem;">Você ainda não adicionou nenhum modelo 3D ao carrinho.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;">
+      <a href="/catalogo" class="btn-cyber" style="width:auto;">Ver Catálogo</a>
+      <a href="/minha-conta/nova-cotacao" class="btn-cyber btn-ghost" style="width:auto;">Orçar Peça Própria</a>
+    </div>
+  </div>
+
+  <!-- Cart content -->
+  <div id="cart-content" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;">
+      <!-- Items -->
+      <div id="items-container"></div>
+
+      <!-- Summary -->
+      <div class="card" style="position:sticky;top:2rem;">
+        <h3 style="margin:0 0 1.5rem;font-size:1.1rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Resumo</h3>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem;font-size:0.9rem;color:var(--muted);">
+          <span>Itens</span>
+          <span id="summary-count">0 itens</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem;font-size:0.9rem;color:var(--muted);">
+          <span>Subtotal</span>
+          <span id="summary-subtotal">R$ 0,00</span>
+        </div>
+        <div style="height:1px;background:var(--border);margin:1rem 0;"></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;align-items:center;">
+          <span style="font-weight:900;font-size:1.1rem;">Total</span>
+          <span id="summary-total" style="font-size:1.75rem;font-weight:900;color:var(--accent);">R$ 0,00</span>
+        </div>
+        <p style="font-size:0.75rem;color:var(--muted);text-align:center;margin:0 0 1.5rem;">Frete calculado no checkout</p>
+        <a href="/checkout" class="btn-cyber" id="checkout-btn">Finalizar Compra →</a>
+        <a href="/catalogo" style="display:block;text-align:center;margin-top:1rem;color:var(--accent);font-size:0.85rem;font-weight:700;text-decoration:none;">Continuar Comprando</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+(function() {
+  var CART_KEY = 'brc_cart';
+
+  function getCart() {
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch { return []; }
+  }
+  function saveCart(items) { localStorage.setItem(CART_KEY, JSON.stringify(items)); }
+  function fmt(v) { return Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+
+  function removeItem(id) {
+    var cart = getCart().filter(function(i) { return i.id !== id; });
+    saveCart(cart); render();
+  }
+  function updateQty(id, delta) {
+    var cart = getCart().map(function(i) {
+      if (i.id === id) { var q = Math.max(1, (i.quantity||1) + delta); return Object.assign({}, i, { quantity: q }); }
+      return i;
+    });
+    saveCart(cart); render();
+  }
+
+  function render() {
+    var cart = getCart();
+    var empty = document.getElementById('cart-empty');
+    var content = document.getElementById('cart-content');
+
+    if (!cart.length) { empty.style.display='block'; content.style.display='none'; return; }
+    empty.style.display='none'; content.style.display='block';
+
+    var container = document.getElementById('items-container');
+    container.innerHTML = cart.map(function(item) {
+      var price = Number(item.price||0);
+      var qty = item.quantity||1;
+      var subtotal = price * qty;
+      return '<div class="item-row">'
+        + '<div class="icon-box">' + (item.emoji || '🖨️') + '</div>'
+        + '<div style="flex:1;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            + '<div>'
+              + '<h3 style="margin:0 0 0.25rem;font-size:1rem;font-weight:700;">' + (item.title||'Modelo 3D') + '</h3>'
+              + '<div style="font-size:0.8rem;color:var(--muted);display:flex;gap:0.75rem;">'
+                + (item.material ? '<span>⚙️ ' + item.material + '</span>' : '')
+                + (item.color ? '<span>🎨 ' + item.color + '</span>' : '')
+                + '<span>💵 ' + fmt(price) + ' /un</span>'
+              + '</div>'
+            + '</div>'
+            + '<div style="font-size:1.2rem;font-weight:900;color:var(--accent);">' + fmt(subtotal) + '</div>'
+          + '</div>'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;">'
+            + '<div class="qty-ctrl">'
+              + '<button class="qty-btn" onclick="brcCart.updateQty(\'' + item.id + '\',-1)">−</button>'
+              + '<span style="font-weight:700;min-width:1.5rem;text-align:center;">' + qty + '</span>'
+              + '<button class="qty-btn" onclick="brcCart.updateQty(\'' + item.id + '\',1)">+</button>'
+            + '</div>'
+            + '<button onclick="brcCart.removeItem(\'' + item.id + '\')" style="background:transparent;border:none;color:#f87171;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:4px;transition:background 0.2s;" onmouseover="this.style.background=\'rgba(239,68,68,0.1)\'" onmouseout="this.style.background=\'transparent\'">🗑 Remover</button>'
+          + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    var total = cart.reduce(function(acc, i) { return acc + Number(i.price||0) * (i.quantity||1); }, 0);
+    var count = cart.reduce(function(acc, i) { return acc + (i.quantity||1); }, 0);
+    document.getElementById('summary-count').textContent = count + ' ite' + (count === 1 ? 'm' : 'ns');
+    document.getElementById('summary-subtotal').textContent = fmt(total);
+    document.getElementById('summary-total').textContent = fmt(total);
+  }
+
+  // Expose to inline onclick handlers
+  window.brcCart = { removeItem: removeItem, updateQty: updateQty };
+
+  document.getElementById('clear-btn').addEventListener('click', function() {
+    if (confirm('Esvaziar o carrinho?')) { saveCart([]); render(); }
+  });
+
+  render();
+})();
+</script>
+</Base>

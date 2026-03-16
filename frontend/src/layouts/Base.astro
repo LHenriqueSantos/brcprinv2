@@ -134,13 +134,14 @@ const currentPath = Astro.url.pathname;
 
       <div class="nav-links" id="nav-links">
         <a href="/catalogo" class={`nav-link ${currentPath.startsWith('/catalogo') ? 'active' : ''}`}>CATÁLOGO</a>
+        <a href="/modelos-parametricos" class={`nav-link ${currentPath.startsWith('/modelos-parametricos') ? 'active' : ''}`}>MODELOS</a>
         <a href="/leiloes" class={`nav-link leilao ${currentPath.startsWith('/leilao') ? 'active' : ''}`}>LEILÃO</a>
         <a href="/contato" class={`nav-link ${currentPath.startsWith('/contato') ? 'active' : ''}`}>CONTATO</a>
       </div>
 
       <div class="navbar-right">
-        <a href="/minha-conta" class="cart-btn">
-          🛒 <span>CARRINHO</span>
+        <a href="/carrinho" class="cart-btn" id="cart-link">
+          🛒 <span>CARRINHO</span><span id="cart-badge" style="display:none;background:var(--accent);color:#000;font-size:0.6rem;font-weight:900;border-radius:999px;padding:0.1rem 0.4rem;margin-left:0.35rem;"></span>
         </a>
         <a href="/minha-conta/login" class="btn-login" id="btn-login">LOGIN</a>
         <a href="/minha-conta" class="btn-dashboard" id="btn-dashboard">MINHA CONTA</a>
@@ -163,6 +164,22 @@ const currentPath = Astro.url.pathname;
       if (token) { dashBtn.style.display = 'block'; loginBtn.style.display = 'none'; }
       else { loginBtn.style.display = 'block'; dashBtn.style.display = 'none'; }
     }
+    // Cart badge
+    try {
+      const cart = JSON.parse(localStorage.getItem('brc_cart') || '[]');
+      const count = cart.reduce((a: number, i: any) => a + (i.quantity || 1), 0);
+      const badge = document.getElementById('cart-badge') as HTMLElement;
+      if (badge && count > 0) { badge.textContent = String(count); badge.style.display = 'inline-block'; }
+    } catch {}
+    // Listen for cart changes
+    window.addEventListener('storage', () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem('brc_cart') || '[]');
+        const count = cart.reduce((a: number, i: any) => a + (i.quantity || 1), 0);
+        const badge = document.getElementById('cart-badge') as HTMLElement;
+        if (badge) { badge.textContent = String(count); badge.style.display = count > 0 ? 'inline-block' : 'none'; }
+      } catch {}
+    });
   </script>
 </body>
 </html>

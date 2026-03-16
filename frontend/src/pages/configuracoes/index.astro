@@ -1,0 +1,242 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Configurações da Conta — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .sidebar { background:rgba(10,12,18,0.95); border-right:1px solid var(--border); padding:2rem 1.5rem; position:sticky; top:0; height:100vh; }
+  .main { padding:2.5rem; max-width:800px; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:4px; color:var(--muted); text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s; margin-bottom:0.25rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.08); color:var(--accent); }
+  .section-card { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; padding:1.75rem; margin-bottom:1.5rem; }
+  .section-title { font-size:0.75rem; color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.25rem; }
+  .form-grid { display:grid; gap:1rem; grid-template-columns:1fr 1fr; }
+  .label { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+  .input-field { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.85rem 1rem; color:#fff; font-size:0.9rem; font-family:'Inter',sans-serif; transition:border-color 0.2s; box-sizing:border-box; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  .btn-save { padding:0.85rem 2rem; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.8rem; text-transform:uppercase; letter-spacing:2px; border-radius:2px; cursor:pointer; background:transparent; font-family:'Inter',sans-serif; transition:all 0.2s; }
+  .btn-save:hover { background:rgba(0,242,255,0.1); box-shadow:0 0 15px rgba(0,242,255,0.2); }
+  .btn-danger { border-color:rgba(239,68,68,0.5); color:#f87171; }
+  .btn-danger:hover { background:rgba(239,68,68,0.1); }
+  .alert { padding:0.75rem 1rem; border-radius:4px; font-size:0.85rem; margin-bottom:1rem; }
+  .alert-success { background:rgba(0,255,148,0.08); border:1px solid rgba(0,255,148,0.2); color:var(--neon-green); }
+  .alert-error { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); color:#f87171; }
+  .toggle-wrap { display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid var(--border); }
+  .toggle-wrap:last-child { border-bottom:none; }
+  .toggle { position:relative; display:inline-block; width:44px; height:24px; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; cursor:pointer; inset:0; background:rgba(255,255,255,0.1); border-radius:24px; transition:0.3s; }
+  .toggle-slider:before { position:absolute; content:""; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:0.3s; }
+  .toggle input:checked + .toggle-slider { background:var(--accent); }
+  .toggle input:checked + .toggle-slider:before { transform:translateX(20px); }
+  @media (max-width:768px) { .layout { grid-template-columns:1fr; } .sidebar { height:auto; position:static; } .form-grid { grid-template-columns:1fr; } }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:2rem;"><img src="/brcprint.svg" alt="BRCPrint" style="height:36px;" /></div>
+    <div style="margin-bottom:2rem;padding:1rem;background:rgba(0,242,255,0.05);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:0.7rem;color:var(--accent);font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:0.5rem;">Cliente</div>
+      <div id="user-name" style="font-weight:800;font-size:1rem;">Carregando...</div>
+    </div>
+    <nav>
+      <a href="/minha-conta" class="nav-item">📦 Meus Orçamentos</a>
+      <a href="/minha-conta/cotacoes" class="nav-item">📋 Histórico</a>
+      <a href="/minha-conta/nova-cotacao" class="nav-item">➕ Nova Cotação</a>
+      <a href="/minha-conta/planos" class="nav-item">💎 Planos B2B</a>
+      <a href="/minha-conta/perfil" class="nav-item">👤 Meu Perfil</a>
+      <a href="/configuracoes" class="nav-item active">⚙️ Configurações</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--border);">
+      <button id="logout-btn" style="width:100%;padding:0.75rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-weight:700;font-size:0.8rem;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:1px;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1 style="font-size:1.8rem;font-weight:900;margin:0 0 2rem;text-transform:uppercase;">Configurações <span style="color:var(--accent);">da Conta</span></h1>
+
+    <div id="feedback" class="alert" style="display:none;"></div>
+
+    <!-- Profile -->
+    <div class="section-card">
+      <div class="section-title">👤 Dados Pessoais</div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div><label class="label">Nome Completo</label><input class="input-field" id="cfg-name" placeholder="Seu nome" /></div>
+        <div><label class="label">E-mail</label><input class="input-field" id="cfg-email" type="email" placeholder="email@exemplo.com" /></div>
+      </div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div><label class="label">CPF / CNPJ</label><input class="input-field" id="cfg-doc" placeholder="000.000.000-00" /></div>
+        <div><label class="label">Telefone / WhatsApp</label><input class="input-field" id="cfg-phone" placeholder="(11) 99999-9999" /></div>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label class="label">Empresa (opcional)</label>
+        <input class="input-field" id="cfg-company" placeholder="Nome da empresa" />
+      </div>
+      <button class="btn-save" onclick="saveProfile()">Salvar Dados</button>
+    </div>
+
+    <!-- Address -->
+    <div class="section-card">
+      <div class="section-title">📍 Endereço Principal</div>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:1rem;margin-bottom:1rem;">
+        <div><label class="label">CEP</label><input class="input-field" id="cfg-cep" placeholder="00000-000" onblur="lookupCep()" /></div>
+        <div><label class="label">Rua / Logradouro</label><input class="input-field" id="cfg-street" /></div>
+      </div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div><label class="label">Número</label><input class="input-field" id="cfg-num" /></div>
+        <div><label class="label">Complemento</label><input class="input-field" id="cfg-compl" /></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div><label class="label">Cidade</label><input class="input-field" id="cfg-city" /></div>
+        <div><label class="label">Bairro</label><input class="input-field" id="cfg-nbhd" /></div>
+        <div><label class="label">UF</label><input class="input-field" id="cfg-state" maxlength="2" style="text-transform:uppercase;" /></div>
+      </div>
+      <button class="btn-save" onclick="saveAddress()">Salvar Endereço</button>
+    </div>
+
+    <!-- Password -->
+    <div class="section-card">
+      <div class="section-title">🔐 Alterar Senha</div>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div><label class="label">Nova Senha</label><input class="input-field" id="cfg-pwd" type="password" placeholder="Mínimo 8 caracteres" /></div>
+        <div><label class="label">Confirmar Nova Senha</label><input class="input-field" id="cfg-pwd2" type="password" placeholder="Repita a nova senha" /></div>
+      </div>
+      <button class="btn-save" onclick="changePassword()">Alterar Senha</button>
+    </div>
+
+    <!-- Notifications -->
+    <div class="section-card">
+      <div class="section-title">🔔 Notificações</div>
+      <div class="toggle-wrap">
+        <div><div style="font-weight:700;font-size:0.9rem;">E-mail de atualizações</div><div style="color:var(--muted);font-size:0.8rem;">Receba alertas de status das suas cotações</div></div>
+        <label class="toggle"><input type="checkbox" id="notif-email" checked /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-wrap">
+        <div><div style="font-weight:700;font-size:0.9rem;">WhatsApp</div><div style="color:var(--muted);font-size:0.8rem;">Receba mensagens de status via WhatsApp</div></div>
+        <label class="toggle"><input type="checkbox" id="notif-whatsapp" checked /><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-wrap">
+        <div><div style="font-weight:700;font-size:0.9rem;">Promoções e novidades</div><div style="color:var(--muted);font-size:0.8rem;">E-mails sobre promoções e novos produtos</div></div>
+        <label class="toggle"><input type="checkbox" id="notif-promo" /><span class="toggle-slider"></span></label>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <button class="btn-save" onclick="saveNotifications()">Salvar Preferências</button>
+      </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="section-card" style="border-color:rgba(239,68,68,0.2);">
+      <div class="section-title" style="color:#f87171;">⚠️ Zona de Risco</div>
+      <p style="color:var(--muted);font-size:0.9rem;margin:0 0 1.25rem;">A exclusão da conta é permanente e apagará todos os seus dados, histórico e cotações.</p>
+      <button class="btn-save btn-danger" onclick="deleteAccount()">Excluir Minha Conta</button>
+    </div>
+  </main>
+</div>
+
+<script is:inline>
+(function() {
+  function tok() { return localStorage.getItem('brc_token') || ''; }
+  function hdrs() { return { 'Authorization':'Bearer '+tok(), 'Content-Type':'application/json' }; }
+  function showFb(msg, ok) {
+    var el = document.getElementById('feedback');
+    el.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
+    el.textContent = msg; el.style.display='block';
+    setTimeout(function(){ el.style.display='none'; }, 4000);
+  }
+
+  window.lookupCep = function() {
+    var cep = document.getElementById('cfg-cep').value.replace(/\D/g,'');
+    if (cep.length!==8) return;
+    fetch('https://viacep.com.br/ws/'+cep+'/json/').then(function(r){return r.json();}).then(function(d){
+      if (!d.erro) {
+        document.getElementById('cfg-street').value = d.logradouro||'';
+        document.getElementById('cfg-nbhd').value = d.bairro||'';
+        document.getElementById('cfg-city').value = d.localidade||'';
+        document.getElementById('cfg-state').value = d.uf||'';
+      }
+    });
+  };
+
+  window.saveProfile = function() {
+    fetch('/api/v1/clients/me', { method:'PUT', headers:hdrs(), body:JSON.stringify({
+      name: document.getElementById('cfg-name').value,
+      email: document.getElementById('cfg-email').value,
+      phone: document.getElementById('cfg-phone').value,
+      document: document.getElementById('cfg-doc').value,
+      company_name: document.getElementById('cfg-company').value,
+    })}).then(function(r){ showFb(r.ok ? '✅ Dados salvos com sucesso!' : '❌ Erro ao salvar dados.', r.ok); });
+  };
+
+  window.saveAddress = function() {
+    fetch('/api/v1/clients/me/address', { method:'PUT', headers:hdrs(), body:JSON.stringify({
+      zipcode: document.getElementById('cfg-cep').value,
+      street: document.getElementById('cfg-street').value,
+      number: document.getElementById('cfg-num').value,
+      complement: document.getElementById('cfg-compl').value,
+      neighborhood: document.getElementById('cfg-nbhd').value,
+      city: document.getElementById('cfg-city').value,
+      state: document.getElementById('cfg-state').value,
+    })}).then(function(r){ showFb(r.ok ? '✅ Endereço salvo!' : '❌ Erro ao salvar.', r.ok); });
+  };
+
+  window.changePassword = function() {
+    var p = document.getElementById('cfg-pwd').value;
+    var p2 = document.getElementById('cfg-pwd2').value;
+    if (!p || p.length < 8) { showFb('❌ A senha deve ter pelo menos 8 caracteres.', false); return; }
+    if (p !== p2) { showFb('❌ As senhas não coincidem.', false); return; }
+    fetch('/api/v1/clients/me/password', { method:'PUT', headers:hdrs(), body:JSON.stringify({ password: p })})
+      .then(function(r){ showFb(r.ok ? '✅ Senha alterada!' : '❌ Erro ao alterar senha.', r.ok); });
+  };
+
+  window.saveNotifications = function() {
+    fetch('/api/v1/clients/me/notifications', { method:'PUT', headers:hdrs(), body:JSON.stringify({
+      email_updates: document.getElementById('notif-email').checked,
+      whatsapp: document.getElementById('notif-whatsapp').checked,
+      promotions: document.getElementById('notif-promo').checked,
+    })}).then(function(r){ showFb(r.ok ? '✅ Preferências salvas!' : '❌ Erro ao salvar.', r.ok); });
+  };
+
+  window.deleteAccount = function() {
+    if (!confirm('ATENÇÃO: Esta ação é irreversível. Tem certeza que deseja excluir sua conta?')) return;
+    if (!confirm('Última confirmação. Todos os seus dados serão apagados. Continuar?')) return;
+    fetch('/api/v1/clients/me', { method:'DELETE', headers:hdrs() })
+      .then(function(r){
+        if (r.ok) { localStorage.removeItem('brc_token'); window.location.href='/'; }
+        else showFb('❌ Erro ao excluir conta. Contate o suporte.', false);
+      });
+  };
+
+  function init() {
+    if (!tok()) { window.location.href='/minha-conta/login'; return; }
+    fetch('/api/v1/clients/me', { headers:{ 'Authorization':'Bearer '+tok() }}).then(function(r){
+      if (r.status===401) { localStorage.removeItem('brc_token'); window.location.href='/minha-conta/login'; return; }
+      return r.json();
+    }).then(function(c) {
+      if (!c) return;
+      document.getElementById('user-name').textContent = c.name || c.email || '';
+      document.getElementById('cfg-name').value = c.name || '';
+      document.getElementById('cfg-email').value = c.email || '';
+      document.getElementById('cfg-phone').value = c.phone || '';
+      document.getElementById('cfg-doc').value = c.document || '';
+      document.getElementById('cfg-company').value = c.company_name || '';
+      if (c.address) {
+        document.getElementById('cfg-cep').value = c.address.zipcode || '';
+        document.getElementById('cfg-street').value = c.address.street || '';
+        document.getElementById('cfg-num').value = c.address.number || '';
+        document.getElementById('cfg-compl').value = c.address.complement || '';
+        document.getElementById('cfg-nbhd').value = c.address.neighborhood || '';
+        document.getElementById('cfg-city').value = c.address.city || '';
+        document.getElementById('cfg-state').value = c.address.state || '';
+      }
+    });
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    localStorage.removeItem('brc_token'); window.location.href='/';
+  });
+  init();
+})();
+</script>
+</Base>

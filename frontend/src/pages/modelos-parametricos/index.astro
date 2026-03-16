@@ -1,0 +1,183 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Modelos Paramétricos — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-purple:#bc13fe; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .container { max-width:1200px; margin:0 auto; padding:4rem 1.5rem; }
+  .hero { text-align:center; margin-bottom:4rem; }
+  .models-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.5rem; }
+  .model-card { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; overflow:hidden; transition:all 0.3s; cursor:pointer; }
+  .model-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 32px rgba(0,242,255,0.1); }
+  .model-thumb { width:100%; aspect-ratio:1; background:linear-gradient(135deg,rgba(0,242,255,0.05),rgba(188,19,254,0.05)); display:flex; align-items:center; justify-content:center; font-size:4rem; border-bottom:1px solid var(--border); }
+  .model-body { padding:1.25rem; }
+  .tag { display:inline-block; padding:0.2rem 0.6rem; border-radius:2px; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; background:rgba(0,242,255,0.1); color:var(--accent); margin-right:0.4rem; margin-bottom:0.4rem; }
+  .btn-cyber { display:inline-block; padding:0.6rem 1.25rem; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.75rem; text-transform:uppercase; letter-spacing:2px; text-decoration:none; border-radius:2px; transition:all 0.2s; cursor:pointer; background:transparent; font-family:'Inter',sans-serif; }
+  .btn-cyber:hover { background:rgba(0,242,255,0.1); }
+  .filter-bar { display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center; margin-bottom:2rem; }
+  .filter-btn { padding:0.4rem 1rem; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; cursor:pointer; border-radius:2px; transition:all 0.2s; font-family:'Inter',sans-serif; }
+  .filter-btn.active,.filter-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(0,242,255,0.06); }
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; display:flex; align-items:center; justify-content:center; padding:2rem; }
+  .modal { background:#0a0c12; border:1px solid var(--border); border-top:3px solid var(--accent); border-radius:4px; padding:2rem; width:100%; max-width:600px; max-height:80vh; overflow-y:auto; }
+  .param-input { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:4px; padding:0.75rem 1rem; color:#fff; font-family:'Inter',sans-serif; box-sizing:border-box; }
+  .param-input:focus { outline:none; border-color:var(--accent); }
+  .label { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:0.4rem; }
+</style>
+
+<div class="container">
+  <div class="hero">
+    <div style="font-size:0.75rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:3px;margin-bottom:1rem;">⚙️ Personalização</div>
+    <h1 style="font-size:3rem;font-weight:900;margin:0 0 1rem;text-transform:uppercase;">Modelos <span style="color:var(--accent);">Paramétricos</span></h1>
+    <p style="color:var(--muted);font-size:1.1rem;max-width:600px;margin:0 auto;">Modelos 3D totalmente customizáveis. Ajuste as dimensões, quantidade de furos, espessuras e muito mais — geramos o arquivo 3D sob medida para você.</p>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-cat="all">Todos</button>
+    <button class="filter-btn" data-cat="mecanico">Mecânico</button>
+    <button class="filter-btn" data-cat="eletronico">Eletrônico</button>
+    <button class="filter-btn" data-cat="domestico">Doméstico</button>
+    <button class="filter-btn" data-cat="industrial">Industrial</button>
+  </div>
+
+  <div id="models-loading" style="text-align:center;padding:4rem;color:var(--muted);">Carregando modelos...</div>
+  <div id="models-grid" class="models-grid" style="display:none;"></div>
+</div>
+
+<!-- Param modal -->
+<div id="param-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h2 id="modal-title" style="margin:0;font-size:1.2rem;font-weight:900;text-transform:uppercase;"></h2>
+      <button onclick="closeModal()" style="background:transparent;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="modal-params"></div>
+    <div style="display:flex;gap:1rem;margin-top:2rem;justify-content:flex-end;">
+      <button onclick="closeModal()" style="padding:0.75rem 1.5rem;background:transparent;border:1px solid var(--border);color:var(--muted);font-weight:700;cursor:pointer;border-radius:2px;font-family:inherit;">Cancelar</button>
+      <button id="modal-generate-btn" onclick="generateModel()" class="btn-cyber">Gerar Modelo</button>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+(function() {
+  var currentModel = null;
+
+  // Default models until API loads
+  var DEFAULTS = [
+    { id:'bracket', name:'Suporte de Parede', emoji:'🔧', category:'mecanico', description:'Suporte paramétrico customizável.', params:[
+      {key:'width_mm',label:'Largura (mm)',type:'number',default:50,min:20,max:200},
+      {key:'depth_mm',label:'Profundidade (mm)',type:'number',default:40,min:10,max:150},
+      {key:'thickness_mm',label:'Espessura (mm)',type:'number',default:3,min:2,max:10},
+      {key:'holes_count',label:'Furos',type:'number',default:2,min:1,max:6}
+    ]},
+    { id:'enclosure', name:'Caixa para Eletrônicos', emoji:'📦', category:'eletronico', description:'Caixa paramétrica para projetos eletrônicos.', params:[
+      {key:'length_mm',label:'Comprimento (mm)',type:'number',default:100,min:40,max:400},
+      {key:'width_mm',label:'Largura (mm)',type:'number',default:60,min:30,max:300},
+      {key:'height_mm',label:'Altura (mm)',type:'number',default:30,min:15,max:150},
+      {key:'wall_mm',label:'Parede (mm)',type:'number',default:2,min:1.5,max:5}
+    ]},
+    { id:'gear', name:'Engrenagem', emoji:'⚙️', category:'mecanico', description:'Engrenagem cilíndrica paramétrica.', params:[
+      {key:'teeth',label:'Dentes',type:'number',default:20,min:8,max:100},
+      {key:'module_mm',label:'Módulo (mm)',type:'number',default:2,min:1,max:5},
+      {key:'thickness_mm',label:'Espessura (mm)',type:'number',default:8,min:3,max:30},
+      {key:'bore_mm',label:'Furo central (mm)',type:'number',default:5,min:2,max:20}
+    ]},
+    { id:'hook', name:'Gancho para Parede', emoji:'🪝', category:'domestico', description:'Gancho resistente com suporte reforçado.', params:[
+      {key:'load_capacity',label:'Capacidade (kg)',type:'number',default:5,min:1,max:20},
+      {key:'width_mm',label:'Largura (mm)',type:'number',default:30,min:15,max:80}
+    ]},
+    { id:'gasket', name:'Vedação / Gaxeta', emoji:'🔵', category:'industrial', description:'Anel de vedação customizável.', params:[
+      {key:'outer_mm',label:'Diâmetro externo (mm)',type:'number',default:50,min:10,max:200},
+      {key:'inner_mm',label:'Diâmetro interno (mm)',type:'number',default:40,min:5,max:195},
+      {key:'thickness_mm',label:'Espessura (mm)',type:'number',default:3,min:1,max:20}
+    ]},
+    { id:'rack', name:'Organizador de Cabos', emoji:'🗂️', category:'domestico', description:'Organize cabos e fios com slots customizáveis.', params:[
+      {key:'slots',label:'Slots',type:'number',default:4,min:1,max:12},
+      {key:'slot_diam',label:'Diâmetro do slot (mm)',type:'number',default:8,min:3,max:25},
+      {key:'length_mm',label:'Comprimento (mm)',type:'number',default:100,min:40,max:300}
+    ]}
+  ];
+
+  var allModels = DEFAULTS;
+  var currentFilter = 'all';
+
+  function renderModels(models) {
+    var filtered = currentFilter==='all' ? models : models.filter(function(m){ return m.category===currentFilter; });
+    var g = document.getElementById('models-grid');
+    document.getElementById('models-loading').style.display = 'none';
+    g.style.display = 'grid';
+    if (!filtered.length) { g.innerHTML='<p style="color:var(--muted);">Nenhum modelo nesta categoria.</p>'; return; }
+    g.innerHTML = filtered.map(function(m) {
+      return '<div class="model-card" onclick="openModal(\''+m.id+'\',\''+m.name+'\')">'
+        +'<div class="model-thumb">' + (m.emoji||'🔧') + '</div>'
+        +'<div class="model-body">'
+          +'<div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">' + m.name + '</div>'
+          +'<div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">' + (m.description||'') + '</div>'
+          +'<span class="tag">' + (m.category||'geral') + '</span>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  window.openModal = function(id, name) {
+    currentModel = allModels.find(function(m){ return m.id===id; });
+    if (!currentModel) return;
+    document.getElementById('modal-title').textContent = currentModel.name;
+    var params = currentModel.params || [];
+    document.getElementById('modal-params').innerHTML = params.map(function(p) {
+      return '<div style="margin-bottom:1rem;">'
+        +'<label class="label" for="param-'+p.key+'">'+p.label+' ('+p.type+')</label>'
+        +'<input class="param-input" id="param-'+p.key+'" type="'+p.type+'" value="'+p.default+'" min="'+(p.min||0)+'" max="'+(p.max||9999)+'" />'
+        +'</div>';
+    }).join('');
+    document.getElementById('param-modal').style.display='flex';
+  };
+
+  window.closeModal = function() { document.getElementById('param-modal').style.display='none'; };
+
+  window.generateModel = function() {
+    if (!currentModel) return;
+    var params = {};
+    (currentModel.params||[]).forEach(function(p) {
+      var el = document.getElementById('param-'+p.key);
+      if (el) params[p.key] = Number(el.value);
+    });
+    var btn = document.getElementById('modal-generate-btn');
+    btn.textContent='Gerando...'; btn.disabled=true;
+    fetch('/api/v1/scad/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model_id: currentModel.id, params: params })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.download_url || d.file_url) {
+        window.location.href = d.download_url || d.file_url;
+      } else if (d.quote_url) {
+        window.location.href = d.quote_url;
+      } else {
+        alert('Modelo gerado com sucesso! Redirecionando para cotação...');
+        if (d.redirect_url) window.location.href = d.redirect_url;
+      }
+    }).catch(function(e) {
+      alert('Erro ao gerar modelo: ' + (e.message||'Tente novamente.'));
+    }).finally(function() { btn.textContent='Gerar Modelo'; btn.disabled=false; });
+  };
+
+  // Filters
+  document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      currentFilter = btn.dataset.cat;
+      document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderModels(allModels);
+    });
+  });
+
+  // Optional: load from API (fallback to defaults)
+  fetch('/api/v1/parametric-models/').then(function(r){ return r.ok ? r.json() : null; }).then(function(d) {
+    if (d && Array.isArray(d) && d.length) { allModels = d; }
+    renderModels(allModels);
+  }).catch(function() { renderModels(allModels); });
+})();
+</script>
+</Base>

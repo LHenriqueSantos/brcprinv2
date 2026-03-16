@@ -1,0 +1,218 @@
+---
+import Base from '../../../../layouts/Base.astro';
+const { id } = Astro.params;
+---
+<Base title={`Cotação #${id} — BRCPrint`}>
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --neon-purple:#bc13fe; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .sidebar { background:rgba(10,12,18,0.95); border-right:1px solid var(--border); padding:2rem 1.5rem; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .main { padding:2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:4px; color:var(--muted); text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s; margin-bottom:0.25rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.08); color:var(--accent); }
+  .card { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; padding:1.5rem; margin-bottom:1.5rem; }
+  .badge { display:inline-flex; align-items:center; gap:0.3rem; padding:0.4rem 1rem; border-radius:999px; font-size:0.8rem; font-weight:700; }
+  .info-row { display:flex; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid var(--border); font-size:0.9rem; }
+  .info-row:last-child { border-bottom:none; }
+  .info-label { color:var(--muted); font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .btn-cyber { display:inline-block; padding:0.75rem 2rem; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.85rem; text-transform:uppercase; letter-spacing:2px; text-decoration:none; border-radius:2px; transition:all 0.2s; cursor:pointer; background:transparent; font-family:'Inter',sans-serif; }
+  .btn-cyber:hover { background:rgba(0,242,255,0.1); box-shadow:0 0 20px rgba(0,242,255,0.2); }
+  .status-bar { display:flex; gap:0; margin-bottom:2rem; }
+  .status-step { flex:1; padding:0.75rem; text-align:center; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; background:rgba(255,255,255,0.03); border:1px solid var(--border); color:var(--muted); }
+  .status-step.active { background:rgba(0,242,255,0.1); border-color:var(--accent); color:var(--accent); }
+  .status-step.done { background:rgba(0,255,148,0.08); border-color:rgba(0,255,148,0.3); color:var(--neon-green); }
+  @media (max-width:768px) { .layout { grid-template-columns:1fr; } .sidebar { height:auto; position:static; } }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:2rem;">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:36px;" />
+    </div>
+    <div style="margin-bottom:2rem;padding:1rem;background:rgba(0,242,255,0.05);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:0.7rem;color:var(--accent);font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:0.5rem;">Cliente</div>
+      <div id="user-name" style="font-weight:800;font-size:1rem;">Carregando...</div>
+    </div>
+    <nav>
+      <a href="/minha-conta" class="nav-item">📦 Meus Orçamentos</a>
+      <a href="/minha-conta/cotacoes" class="nav-item active">📋 Histórico</a>
+      <a href="/minha-conta/nova-cotacao" class="nav-item">➕ Nova Cotação</a>
+      <a href="/minha-conta/perfil" class="nav-item">👤 Meu Perfil</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--border);">
+      <button id="logout-btn" style="width:100%;padding:0.75rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-weight:700;font-size:0.8rem;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:1px;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem;">
+      <a href="/minha-conta/cotacoes" style="color:var(--muted);text-decoration:none;font-size:0.85rem;">← Voltar</a>
+      <h1 style="font-size:1.6rem;font-weight:900;margin:0;">Cotação <span style="color:var(--accent);" id="quote-id-label">#{id}</span></h1>
+      <span id="status-badge" class="badge"></span>
+    </div>
+
+    <!-- Status Progress -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-step" data-step="pending">⏳ Aguardando</div>
+      <div class="status-step" data-step="quoted">💰 Orçado</div>
+      <div class="status-step" data-step="approved">✅ Aprovado</div>
+      <div class="status-step" data-step="in_production">🖨️ Produção</div>
+      <div class="status-step" data-step="delivered">🏆 Entregue</div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="page-loading" style="padding:4rem;text-align:center;color:var(--muted);">Carregando detalhes...</div>
+    <div id="page-content" style="display:none;">
+
+      <!-- Quote Info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+        <div class="card">
+          <div style="font-size:0.75rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">📄 Detalhes da Cotação</div>
+          <div class="info-row">
+            <span class="info-label">Arquivo</span>
+            <span id="q-title" style="font-weight:700;"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Material</span>
+            <span id="q-material"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cor</span>
+            <span id="q-color"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Quantidade</span>
+            <span id="q-qty"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Enviado em</span>
+            <span id="q-date"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:0.75rem;color:var(--neon-green);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">💵 Valores</div>
+          <div class="info-row">
+            <span class="info-label">Preço da Peça</span>
+            <span id="q-price" style="font-weight:800;color:var(--neon-green);"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Frete</span>
+            <span id="q-shipping"></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Impostos</span>
+            <span id="q-tax"></span>
+          </div>
+          <div class="info-row" style="border-top:2px solid var(--border);padding-top:1rem;margin-top:0.5rem;">
+            <span style="font-weight:900;font-size:1rem;">TOTAL</span>
+            <span id="q-total" style="font-size:1.5rem;font-weight:900;color:var(--accent);"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portal link -->
+      <div id="portal-section" style="display:none;" class="card">
+        <div style="font-size:0.75rem;color:var(--neon-purple);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">🔗 Portal de Aprovação</div>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0 0 1.5rem;">Acesse o portal para ver detalhes completos e aprovar ou recusar esta cotação.</p>
+        <a id="portal-link" class="btn-cyber" href="#">ACESSAR PORTAL DE APROVAÇÃO →</a>
+      </div>
+
+      <!-- Observações -->
+      <div id="obs-section" style="display:none;" class="card">
+        <div style="font-size:0.75rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">📝 Observações</div>
+        <p id="q-obs" style="color:var(--muted);font-size:0.9rem;margin:0;line-height:1.6;"></p>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script is:inline>
+(function() {
+  var QUOTE_ID = window.location.pathname.split('/').filter(Boolean).pop();
+  var STATUS_MAP = {
+    pending:          { label:'Aguardando', color:'#f59e0b', icon:'⏳' },
+    quoted:           { label:'Orçado',     color:'#3b82f6', icon:'💰' },
+    approved:         { label:'Aprovado',   color:'#10b981', icon:'✅' },
+    in_production:    { label:'Produção',   color:'#8b5cf6', icon:'🖨️' },
+    awaiting_payment: { label:'Aguard. Pgto', color:'#f59e0b', icon:'💳' },
+    rejected:         { label:'Recusado',   color:'#ef4444', icon:'❌' },
+    delivered:        { label:'Entregue',   color:'#22c55e', icon:'🏆' },
+    cancelled:        { label:'Cancelado',  color:'#6b7280', icon:'✖' },
+  };
+  var STATUS_ORDER = ['pending','quoted','approved','in_production','delivered'];
+
+  function tok() { return localStorage.getItem('brc_token') || ''; }
+  function hdrs() { return { 'Authorization': 'Bearer ' + tok() }; }
+  function fmt(v) { return Number(v||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+  function set(id, val) { var el=document.getElementById(id); if (el) el.textContent = val; }
+
+  function updateStatusBar(status) {
+    var curIdx = STATUS_ORDER.indexOf(status);
+    document.querySelectorAll('.status-step').forEach(function(step, i) {
+      step.classList.remove('active','done');
+      if (i < curIdx) step.classList.add('done');
+      else if (i === curIdx) step.classList.add('active');
+    });
+  }
+
+  function render(q) {
+    document.getElementById('page-loading').style.display = 'none';
+    document.getElementById('page-content').style.display = 'block';
+
+    var s = STATUS_MAP[q.status] || { label:q.status, color:'#888', icon:'•' };
+    var badge = document.getElementById('status-badge');
+    badge.textContent = s.icon + ' ' + s.label;
+    badge.style.cssText = 'background:' + s.color + '22;color:' + s.color + ';border:1px solid ' + s.color + '44;';
+
+    updateStatusBar(q.status);
+
+    set('q-title', q.title || 'Cotação #' + q.id);
+    set('q-material', q.material_preference || 'Não especificado');
+    set('q-color', q.color_preference || 'Não especificado');
+    set('q-qty', (q.quantity||1) + ' unidade(s)');
+    set('q-date', new Date(q.created_at).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' }));
+    set('q-price', q.final_price ? fmt(q.final_price) : '—');
+    set('q-shipping', q.shipping_cost ? fmt(q.shipping_cost) : '—');
+    set('q-tax', q.tax_amount ? fmt(q.tax_amount) : '—');
+    var total = Number(q.final_price||0) + Number(q.tax_amount||0) + Number(q.shipping_cost||0);
+    set('q-total', total > 0 ? fmt(total) : '—');
+
+    if (q.public_token) {
+      var ps = document.getElementById('portal-section');
+      ps.style.display = 'block';
+      document.getElementById('portal-link').href = '/portal/' + q.public_token;
+    }
+
+    if (q.customer_note || q.notes) {
+      var os = document.getElementById('obs-section');
+      os.style.display = 'block';
+      set('q-obs', q.customer_note || q.notes);
+    }
+  }
+
+  function init() {
+    if (!tok()) { window.location.href = '/minha-conta/login'; return; }
+    var h = hdrs();
+    fetch('/api/v1/clients/me', { headers: h }).then(function(r) {
+      if (r.status === 401) { localStorage.removeItem('brc_token'); window.location.href = '/minha-conta/login'; return; }
+      if (r.ok) r.json().then(function(c) { set('user-name', c.name || c.email || ''); });
+    });
+    fetch('/api/v1/quotes/' + QUOTE_ID, { headers: h }).then(function(r) {
+      if (!r.ok) { document.getElementById('page-loading').textContent = 'Cotação não encontrada.'; return; }
+      return r.json();
+    }).then(function(q) { if (q) render(q); }).catch(function(e) {
+      document.getElementById('page-loading').textContent = 'Erro ao carregar cotação.';
+    });
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    localStorage.removeItem('brc_token'); window.location.href = '/';
+  });
+
+  init();
+})();
+</script>
+</Base>

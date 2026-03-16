@@ -1,0 +1,338 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Finalizar Compra — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .container { max-width:1100px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+  .step-card { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; padding:2rem; margin-bottom:1.5rem; transition:opacity 0.3s; }
+  .step-card.disabled { opacity:0.5; pointer-events:none; }
+  .step-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+  .step-num { width:32px;height:32px;border-radius:50%;background:rgba(0,242,255,0.15);border:1px solid var(--accent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.9rem;flex-shrink:0; }
+  .step-num.done { background:var(--neon-green);border-color:var(--neon-green);color:#000; }
+  .method-opt { padding:1.25rem;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:1rem; }
+  .method-opt:hover,.method-opt.active { border-color:var(--accent);background:rgba(0,242,255,0.05); }
+  .input-field { width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:0.85rem 1rem;color:#fff;font-size:0.9rem;font-family:'Inter',sans-serif;transition:border-color 0.2s;box-sizing:border-box; }
+  .input-field:focus { outline:none; border-color:var(--accent); }
+  .label { display:block;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:0.4rem; }
+  .form-grid { display:grid;gap:1rem;grid-template-columns:1fr 1fr; }
+  .btn-cyber { display:block;padding:1rem 2rem;border:1px solid var(--accent);color:var(--accent);font-weight:900;font-size:0.85rem;text-transform:uppercase;letter-spacing:2px;text-decoration:none;border-radius:2px;transition:all 0.2s;cursor:pointer;background:transparent;font-family:'Inter',sans-serif;text-align:center; }
+  .btn-cyber:hover:not(:disabled) { background:rgba(0,242,255,0.1);box-shadow:0 0 20px rgba(0,242,255,0.2); }
+  .btn-cyber:disabled { opacity:0.5;cursor:not-allowed; }
+  .btn-full { width:100%;box-sizing:border-box; }
+  .summary-card { background:rgba(10,12,18,0.9);border:1px solid var(--border);border-radius:4px;padding:1.5rem;position:sticky;top:2rem; }
+  .shipping-opt { padding:1rem;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem; }
+  .shipping-opt:hover,.shipping-opt.active { border-color:var(--accent);background:rgba(0,242,255,0.05); }
+  .error-box { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:1rem;border-radius:4px;font-size:0.9rem;margin-bottom:1rem; }
+  @media (max-width:768px) { .form-grid { grid-template-columns:1fr; } }
+</style>
+
+<div class="container">
+  <h1 style="font-size:2rem;font-weight:900;margin:0 0 2rem;">Finalizar <span style="color:var(--accent);">Compra</span></h1>
+
+  <!-- Empty cart guard -->
+  <div id="empty-guard" style="display:none;text-align:center;padding:4rem;">
+    <p style="font-size:3rem;margin-bottom:1rem;">🛒</p>
+    <h2 style="margin:0 0 1rem;">Carrinho vazio</h2>
+    <a href="/carrinho" class="btn-cyber" style="display:inline-block;width:auto;">Ir para o Carrinho</a>
+  </div>
+
+  <div id="checkout-content" style="display:none;display:grid;grid-template-columns:1fr 360px;gap:2rem;align-items:start;">
+    <!-- LEFT: Steps -->
+    <div>
+
+      <!-- STEP 1: Delivery & Address -->
+      <div class="step-card" id="step1-card">
+        <div class="step-header">
+          <div class="step-num" id="step1-num">1</div>
+          <div>
+            <h2 style="margin:0;font-size:1.2rem;font-weight:900;text-transform:uppercase;">Entrega</h2>
+            <p id="step1-summary" style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--muted);display:none;"></p>
+          </div>
+          <button id="step1-edit" style="display:none;margin-left:auto;background:transparent;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-size:0.85rem;font-family:inherit;">editar</button>
+        </div>
+        <div id="step1-body">
+          <!-- Delivery method -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+            <div class="method-opt active" id="opt-shipping" onclick="setDelivery('shipping')">
+              <span style="font-size:1.5rem;">🚚</span>
+              <div>
+                <div style="font-weight:700;">Enviar</div>
+                <div style="font-size:0.75rem;color:var(--muted);">Correios / Transportadora</div>
+              </div>
+            </div>
+            <div class="method-opt" id="opt-pickup" onclick="setDelivery('pickup')">
+              <span style="font-size:1.5rem;">🏪</span>
+              <div>
+                <div style="font-weight:700;">Retirar</div>
+                <div style="font-size:0.75rem;color:var(--muted);">Sem custo de frete</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address form (only for shipping) -->
+          <div id="addr-form">
+            <div class="form-grid" style="margin-bottom:1rem;">
+              <div><label class="label">Nome Completo</label><input class="input-field" id="addr-name" placeholder="João Silva" /></div>
+              <div><label class="label">E-mail</label><input class="input-field" id="addr-email" type="email" placeholder="joao@email.com" /></div>
+            </div>
+            <div class="form-grid" style="margin-bottom:1rem;">
+              <div><label class="label">CPF / CNPJ</label><input class="input-field" id="addr-doc" placeholder="000.000.000-00" /></div>
+              <div><label class="label">Telefone / WhatsApp</label><input class="input-field" id="addr-phone" placeholder="(11) 99999-9999" /></div>
+            </div>
+            <div style="display:grid;grid-template-columns:140px 1fr;gap:1rem;margin-bottom:1rem;">
+              <div><label class="label">CEP</label><input class="input-field" id="addr-cep" placeholder="00000-000" onblur="lookupCep()" /></div>
+              <div><label class="label">Rua / Logradouro</label><input class="input-field" id="addr-street" /></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">
+              <div><label class="label">Número</label><input class="input-field" id="addr-num" /></div>
+              <div><label class="label">Complemento</label><input class="input-field" id="addr-compl" /></div>
+              <div><label class="label">Bairro</label><input class="input-field" id="addr-nbhd" /></div>
+            </div>
+            <div style="display:grid;grid-template-columns:3fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+              <div><label class="label">Cidade</label><input class="input-field" id="addr-city" /></div>
+              <div><label class="label">UF</label><input class="input-field" id="addr-state" maxlength="2" style="text-transform:uppercase;" /></div>
+            </div>
+          </div>
+
+          <button class="btn-cyber" onclick="submitStep1()" style="margin-left:auto;display:block;width:auto;padding:0.75rem 2rem;">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Shipping options -->
+      <div class="step-card disabled" id="step2-card">
+        <div class="step-header">
+          <div class="step-num" id="step2-num">2</div>
+          <div>
+            <h2 style="margin:0;font-size:1.2rem;font-weight:900;text-transform:uppercase;">Frete</h2>
+            <p id="step2-summary" style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--muted);display:none;"></p>
+          </div>
+          <button id="step2-edit" style="display:none;margin-left:auto;background:transparent;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-size:0.85rem;font-family:inherit;" onclick="goStep(2)">editar</button>
+        </div>
+        <div id="step2-body" style="display:none;">
+          <div id="shipping-loading" style="padding:2rem;text-align:center;color:var(--muted);">Calculando opções de frete...</div>
+          <div id="shipping-opts"></div>
+          <button class="btn-cyber" onclick="submitStep2()" style="margin-left:auto;display:block;width:auto;padding:0.75rem 2rem;margin-top:1rem;">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Payment -->
+      <div class="step-card disabled" id="step3-card">
+        <div class="step-header">
+          <div class="step-num" id="step3-num">3</div>
+          <h2 style="margin:0;font-size:1.2rem;font-weight:900;text-transform:uppercase;">Pagamento</h2>
+        </div>
+        <div id="step3-body" style="display:none;">
+          <div style="padding:1rem;border:1px solid var(--accent);border-radius:4px;background:rgba(0,242,255,0.05);display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+            <span style="font-size:1.5rem;">💳</span>
+            <div>
+              <div style="font-weight:700;">Mercado Pago</div>
+              <div style="font-size:0.8rem;color:var(--muted);">PIX, Cartão de Crédito, Boleto</div>
+            </div>
+          </div>
+          <p style="color:var(--muted);font-size:0.9rem;margin:0 0 1.5rem;">Você será redirecionado para o ambiente seguro do Mercado Pago.</p>
+          <div id="pay-error" class="error-box" style="display:none;"></div>
+          <button class="btn-cyber btn-full" id="pay-btn" onclick="submitOrder()">Confirmar e Pagar →</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Summary -->
+    <div>
+      <div class="summary-card">
+        <h3 style="margin:0 0 1.25rem;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Resumo</h3>
+        <div id="summary-items" style="margin-bottom:1rem;"></div>
+        <div style="height:1px;background:var(--border);margin-bottom:1rem;"></div>
+        <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:0.5rem;">
+          <span style="color:var(--muted);">Subtotal</span>
+          <span id="sum-subtotal">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.9rem;margin-bottom:1rem;">
+          <span style="color:var(--muted);">Frete</span>
+          <span id="sum-freight">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:1.1rem;font-weight:900;">
+          <span>Total</span>
+          <span id="sum-total" style="color:var(--accent);">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+(function() {
+  var CART_KEY = 'brc_cart';
+  var state = { delivery:'shipping', selectedShipping:null, address:{} };
+
+  function getCart() { try { return JSON.parse(localStorage.getItem(CART_KEY)||'[]'); } catch { return []; } }
+  function fmt(v) { return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+  window.setDelivery = function(method) {
+    state.delivery = method;
+    document.getElementById('opt-shipping').classList.toggle('active', method==='shipping');
+    document.getElementById('opt-pickup').classList.toggle('active', method==='pickup');
+    document.getElementById('addr-form').style.display = method==='shipping' ? 'block' : 'none';
+  };
+
+  window.lookupCep = function() {
+    var cep = document.getElementById('addr-cep').value.replace(/\D/g,'');
+    if (cep.length!==8) return;
+    fetch('https://viacep.com.br/ws/'+cep+'/json/').then(function(r){return r.json();}).then(function(d){
+      if (!d.erro) {
+        document.getElementById('addr-street').value = d.logradouro||'';
+        document.getElementById('addr-nbhd').value = d.bairro||'';
+        document.getElementById('addr-city').value = d.localidade||'';
+        document.getElementById('addr-state').value = d.uf||'';
+      }
+    });
+  };
+
+  window.submitStep1 = function() {
+    state.address = {
+      name: document.getElementById('addr-name').value,
+      email: document.getElementById('addr-email').value,
+      document: document.getElementById('addr-doc').value,
+      phone: document.getElementById('addr-phone').value,
+      zipcode: document.getElementById('addr-cep').value,
+      street: document.getElementById('addr-street').value,
+      number: document.getElementById('addr-num').value,
+      complement: document.getElementById('addr-compl').value,
+      neighborhood: document.getElementById('addr-nbhd').value,
+      city: document.getElementById('addr-city').value,
+      state: document.getElementById('addr-state').value,
+    };
+    if (state.delivery === 'pickup') { goStep(3); return; }
+    goStep(2);
+    calcShipping();
+  };
+
+  window.goStep = function(n) {
+    [1,2,3].forEach(function(s) {
+      var card = document.getElementById('step'+s+'-card');
+      var body = document.getElementById('step'+s+'-body');
+      if (s < n) {
+        card.classList.remove('disabled');
+        if (body) body.style.display = 'none';
+        var edit = document.getElementById('step'+s+'-edit');
+        if (edit) edit.style.display='block';
+        var summ = document.getElementById('step'+s+'-summary');
+        if (summ) summ.style.display='block';
+        var num = document.getElementById('step'+s+'-num');
+        if (num) num.classList.add('done');
+      } else if (s === n) {
+        card.classList.remove('disabled');
+        if (body) body.style.display='block';
+      } else {
+        card.classList.add('disabled');
+        if (body) body.style.display = 'none';
+      }
+    });
+    if (n === 2) {
+      document.getElementById('step1-summary').textContent = state.delivery==='pickup' ? 'Retirada na loja' : state.address.zipcode + ', ' + state.address.number;
+    }
+  };
+
+  function calcShipping() {
+    var cart = getCart();
+    var totalWeight = cart.reduce(function(acc,i){ return acc + 100*(i.quantity||1); }, 0);
+    var cep = state.address.zipcode;
+    if (!cep) { document.getElementById('shipping-loading').textContent='CEP não informado.'; return; }
+    fetch('/api/v1/shipping/calculate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ to_zip: cep.replace(/\D/g,''), weight_g: totalWeight })
+    }).then(function(r){ return r.ok ? r.json() : []; }).then(function(opts){
+      document.getElementById('shipping-loading').style.display='none';
+      var el = document.getElementById('shipping-opts');
+      if (!opts.length) { el.innerHTML='<p style="color:var(--muted);">Retirada na loja disponível. Nenhuma opção de frete encontrada.</p>'; return; }
+      el.innerHTML = opts.map(function(o,i){
+        return '<div class="shipping-opt'+(i===0?' active':'')+'" onclick="selectShipping('+i+')" id="shopt-'+i+'">'
+          +'<div>'
+            +'<div style="font-weight:700;">'+o.name+' · '+(o.company||'')+' </div>'
+            +'<div style="font-size:0.75rem;color:var(--muted);">'+o.delivery_range+' dias úteis</div>'
+          +'</div>'
+          +'<span style="font-weight:900;color:var(--accent);">'+fmt(o.price)+'</span>'
+          +'</div>';
+      }).join('');
+      selectShipping(0, opts[0]);
+      window._shippingOpts = opts;
+    }).catch(function(){
+      document.getElementById('shipping-loading').textContent='Erro ao calcular frete. Por favor, tente retirada na loja.';
+    });
+  }
+
+  window.selectShipping = function(idx, opt) {
+    var opts = window._shippingOpts || [];
+    state.selectedShipping = opt || opts[idx];
+    document.querySelectorAll('.shipping-opt').forEach(function(el,i){ el.classList.toggle('active', i===idx); });
+    updateSummary();
+  };
+
+  window.submitStep2 = function() {
+    goStep(3);
+    document.getElementById('step2-summary').textContent = state.selectedShipping ? state.selectedShipping.name+' — '+fmt(state.selectedShipping.price) : 'Frete calculado';
+  };
+
+  window.submitOrder = async function() {
+    var btn = document.getElementById('pay-btn');
+    var errEl = document.getElementById('pay-error');
+    btn.disabled=true; btn.textContent='Processando...'; errEl.style.display='none';
+    var cart = getCart();
+    var tok = localStorage.getItem('brc_token') || '';
+    var freight = state.delivery==='pickup' ? 0 : (state.selectedShipping?.price || 0);
+    var subtotal = cart.reduce(function(acc,i){ return acc+Number(i.price||0)*(i.quantity||1); }, 0);
+    try {
+      var res = await fetch('/api/v1/orders/', {
+        method:'POST',
+        headers:{'Content-Type':'application/json',...(tok?{'Authorization':'Bearer '+tok}:{})},
+        body: JSON.stringify({
+          items: cart, address: state.address,
+          delivery_method: state.delivery,
+          shipping_service: state.selectedShipping,
+          shipping_cost: freight, subtotal: subtotal,
+          total: subtotal + freight
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Erro ao criar pedido');
+      if (data.payment_url) { window.location.href = data.payment_url; return; }
+      // Fallback: redirect to portal
+      localStorage.removeItem(CART_KEY);
+      window.location.href = data.public_token ? '/portal/'+data.public_token : '/checkout/sucesso';
+    } catch(e) {
+      errEl.textContent = '⚠️ '+(e.message||'Erro desconhecido');
+      errEl.style.display='block';
+      btn.disabled=false; btn.textContent='Confirmar e Pagar →';
+    }
+  };
+
+  function updateSummary() {
+    var cart = getCart();
+    var subs = cart.reduce(function(acc,i){ return acc+Number(i.price||0)*(i.quantity||1); }, 0);
+    var freight = state.delivery==='pickup' ? 0 : (state.selectedShipping ? Number(state.selectedShipping.price) : 0);
+    document.getElementById('sum-subtotal').textContent = fmt(subs);
+    document.getElementById('sum-freight').textContent = freight===0&&state.delivery==='pickup' ? '🆓 Grátis' : (state.selectedShipping ? fmt(freight) : '—');
+    document.getElementById('sum-total').textContent = fmt(subs+freight);
+    var items = getCart();
+    document.getElementById('summary-items').innerHTML = items.map(function(i){
+      return '<div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.5rem;">'
+        +'<span>'+i.title+' ×'+(i.quantity||1)+'</span>'
+        +'<span>'+fmt(Number(i.price||0)*(i.quantity||1))+'</span></div>';
+    }).join('');
+  }
+
+  // Init
+  var cart = getCart();
+  if (!cart.length) {
+    document.getElementById('empty-guard').style.display='block';
+    document.getElementById('checkout-content').style.display='none';
+  } else {
+    document.getElementById('empty-guard').style.display='none';
+    document.getElementById('checkout-content').style.display='grid';
+    updateSummary();
+  }
+})();
+</script>
+</Base>

@@ -1,0 +1,175 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Minhas Cotações — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .sidebar { background:rgba(10,12,18,0.95); border-right:1px solid var(--border); padding:2rem 1.5rem; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .main { padding:2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:4px; color:var(--muted); text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s; margin-bottom:0.25rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.08); color:var(--accent); }
+  .table-wrap { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-bottom:2rem; }
+  table { width:100%; border-collapse:collapse; }
+  th { background:rgba(0,242,255,0.05); padding:1rem 1.5rem; text-align:left; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:1rem 1.5rem; border-bottom:1px solid var(--border); font-size:0.9rem; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(255,255,255,0.015); cursor:pointer; }
+  .badge { display:inline-flex; align-items:center; gap:0.3rem; padding:0.3rem 0.75rem; border-radius:999px; font-size:0.7rem; font-weight:700; }
+  .btn-cyber { display:inline-block; padding:0.65rem 1.5rem; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.8rem; text-transform:uppercase; letter-spacing:2px; text-decoration:none; border-radius:2px; transition:all 0.2s; }
+  .btn-cyber:hover { background:rgba(0,242,255,0.1); }
+  .filter-bar { display:flex; gap:1rem; align-items:center; margin-bottom:1.5rem; }
+  .filter-btn { padding:0.35rem 1rem; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; cursor:pointer; border-radius:2px; transition:all 0.2s; font-family:'Inter',sans-serif; }
+  .filter-btn.active,.filter-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(0,242,255,0.06); }
+  @media (max-width:768px) { .layout { grid-template-columns:1fr; } .sidebar { height:auto; position:static; } }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:2rem;">
+      <img src="/brcprint.svg" alt="BRCPrint" style="height:36px;" />
+    </div>
+    <div id="user-info" style="margin-bottom:2rem;padding:1rem;background:rgba(0,242,255,0.05);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:0.7rem;color:var(--accent);font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:0.5rem;">Cliente</div>
+      <div id="user-name" style="font-weight:800;font-size:1rem;">Carregando...</div>
+    </div>
+    <nav>
+      <a href="/minha-conta" class="nav-item">📦 Meus Orçamentos</a>
+      <a href="/minha-conta/cotacoes" class="nav-item active">📋 Histórico</a>
+      <a href="/minha-conta/nova-cotacao" class="nav-item">➕ Nova Cotação</a>
+      <a href="/minha-conta/perfil" class="nav-item">👤 Meu Perfil</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--border);">
+      <button id="logout-btn" style="width:100%;padding:0.75rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-weight:700;font-size:0.8rem;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:1px;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+      <div>
+        <h1 style="font-size:1.8rem;font-weight:900;margin:0;text-transform:uppercase;">Histórico de <span style="color:var(--accent);">Cotações</span></h1>
+        <p id="count-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0;">Carregando...</p>
+      </div>
+      <a href="/minha-conta/nova-cotacao" class="btn-cyber">+ Nova Cotação</a>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">Todos</button>
+      <button class="filter-btn" data-filter="pending">Aguardando</button>
+      <button class="filter-btn" data-filter="quoted">Orçados</button>
+      <button class="filter-btn" data-filter="approved">Aprovados</button>
+      <button class="filter-btn" data-filter="in_production">Em Produção</button>
+      <button class="filter-btn" data-filter="delivered">Entregues</button>
+    </div>
+
+    <div class="table-wrap">
+      <div id="table-loading" style="padding:3rem;text-align:center;color:var(--muted);">Carregando cotações...</div>
+      <div id="table-empty" style="display:none;padding:4rem;text-align:center;color:var(--muted);">
+        <p style="font-size:3rem;margin:0 0 1rem;">📋</p>
+        <h3 style="margin:0 0 0.5rem;color:#fff;">Nenhuma cotação encontrada</h3>
+        <a href="/minha-conta/nova-cotacao" style="display:inline-block;margin-top:1.5rem;color:var(--accent);font-weight:600;text-decoration:none;">Criar primeira cotação →</a>
+      </div>
+      <div id="table-content" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Arquivo / Projeto</th>
+              <th>Material</th>
+              <th>Qtd</th>
+              <th>Status</th>
+              <th>Valor</th>
+              <th>Data</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="quotes-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script is:inline>
+(function() {
+  var STATUS_MAP = {
+    pending:       { label:'Aguardando',  color:'#f59e0b', icon:'⏳' },
+    quoted:        { label:'Orçado',      color:'#3b82f6', icon:'💰' },
+    approved:      { label:'Aprovado',    color:'#10b981', icon:'✅' },
+    in_production: { label:'Produção',    color:'#8b5cf6', icon:'🖨️' },
+    rejected:      { label:'Recusado',    color:'#ef4444', icon:'❌' },
+    awaiting_payment: { label:'Aguard. Pgto', color:'#f59e0b', icon:'💳' },
+    delivered:     { label:'Entregue',    color:'#22c55e', icon:'🏆' },
+    cancelled:     { label:'Cancelado',   color:'#6b7280', icon:'✖' },
+  };
+
+  var allQuotes = [];
+  var currentFilter = 'all';
+
+  function tok() { return localStorage.getItem('brc_token') || ''; }
+  function hdrs() { return { 'Authorization': 'Bearer ' + tok() }; }
+  function fmt(v) { return Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+
+  function renderRows(quotes) {
+    var tbody = document.getElementById('quotes-tbody');
+    var loading = document.getElementById('table-loading');
+    var empty = document.getElementById('table-empty');
+    var content = document.getElementById('table-content');
+    loading.style.display = 'none';
+    if (!quotes.length) { empty.style.display='block'; content.style.display='none'; return; }
+    empty.style.display = 'none';
+    content.style.display = 'block';
+    tbody.innerHTML = quotes.map(function(q) {
+      var s = STATUS_MAP[q.status] || { label: q.status, color:'#888', icon:'•' };
+      var total = q.final_price ? fmt(Number(q.final_price) + Number(q.tax_amount||0) + Number(q.shipping_cost||0)) : '—';
+      var name = q.title || 'Cotação #' + q.id;
+      var link = q.public_token ? '<a href="/portal/' + q.public_token + '" style="color:var(--accent);font-size:0.8rem;font-weight:700;text-decoration:none;border:1px solid var(--accent);padding:0.3rem 0.75rem;border-radius:2px;">VER</a>' : '—';
+      return '<tr onclick="window.location=\'/minha-conta/cotacoes/' + q.id + '\'">'
+        + '<td style="color:var(--muted);font-size:0.8rem;">#' + q.id + '</td>'
+        + '<td><div style="font-weight:700;">' + name + '</div><div style="font-size:0.75rem;color:var(--muted);">' + (q.client_name||'') + '</div></td>'
+        + '<td><div style="font-size:0.85rem;">' + (q.material_preference||'Qualquer') + '</div><div style="font-size:0.7rem;color:var(--muted);">' + (q.color_preference||'') + '</div></td>'
+        + '<td>' + (q.quantity||1) + ' un</td>'
+        + '<td><span class="badge" style="background:' + s.color + '22;color:' + s.color + ';border:1px solid ' + s.color + '44;">' + s.icon + ' ' + s.label + '</span></td>'
+        + '<td style="font-weight:800;color:' + (q.public_token ? 'var(--neon-green)' : 'var(--muted)') + ';">' + total + '</td>'
+        + '<td style="color:var(--muted);font-size:0.8rem;">' + new Date(q.created_at).toLocaleDateString('pt-BR') + '</td>'
+        + '<td>' + link + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function applyFilter(filter) {
+    currentFilter = filter;
+    var filtered = filter === 'all' ? allQuotes : allQuotes.filter(function(q) { return q.status === filter; });
+    renderRows(filtered);
+    document.querySelectorAll('.filter-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+  }
+
+  function init() {
+    if (!tok()) { window.location.href = '/minha-conta/login'; return; }
+    var h = hdrs();
+    fetch('/api/v1/clients/me', { headers: h }).then(function(r) {
+      if (r.status === 401) { localStorage.removeItem('brc_token'); window.location.href = '/minha-conta/login'; return; }
+      if (r.ok) r.json().then(function(c) { document.getElementById('user-name').textContent = c.name || c.email || ''; });
+    });
+    fetch('/api/v1/quotes/my/', { headers: h }).then(function(r) { return r.ok ? r.json() : []; }).then(function(data) {
+      allQuotes = Array.isArray(data) ? data : (data.items || []);
+      document.getElementById('count-msg').textContent = allQuotes.length + ' cotação(ões) registrada(s)';
+      applyFilter('all');
+    }).catch(function(e) { console.error(e); document.getElementById('table-loading').textContent = 'Erro ao carregar cotações.'; });
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { applyFilter(btn.dataset.filter); });
+  });
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    localStorage.removeItem('brc_token'); window.location.href = '/';
+  });
+
+  init();
+})();
+</script>
+</Base>

@@ -1,0 +1,136 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Planos B2B — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-purple:#bc13fe; --neon-green:#00ff94; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .sidebar { background:rgba(10,12,18,0.95); border-right:1px solid var(--border); padding:2rem 1.5rem; position:sticky; top:0; height:100vh; }
+  .main { padding:2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:4px; color:var(--muted); text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s; margin-bottom:0.25rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.08); color:var(--accent); }
+  .plan-card { border:1px solid var(--border); border-radius:4px; padding:2rem; background:rgba(10,12,18,0.6); transition:all 0.3s; cursor:pointer; }
+  .plan-card:hover,.plan-card.featured { border-color:var(--accent); background:rgba(0,242,255,0.04); }
+  .plan-card.featured { border-top:3px solid var(--accent); }
+  .plan-price { font-size:2.5rem; font-weight:900; color:var(--accent); margin:1rem 0; }
+  .feature-item { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0; font-size:0.9rem; border-bottom:1px solid var(--border); }
+  .feature-item:last-child { border-bottom:none; }
+  .btn-cyber { display:block; padding:1rem; border:1px solid var(--accent); color:var(--accent); font-weight:900; font-size:0.85rem; text-transform:uppercase; letter-spacing:2px; text-decoration:none; border-radius:2px; transition:all 0.2s; cursor:pointer; background:transparent; font-family:'Inter',sans-serif; text-align:center; margin-top:1.5rem; }
+  .btn-cyber:hover { background:rgba(0,242,255,0.1); box-shadow:0 0 20px rgba(0,242,255,0.2); }
+  @media (max-width:768px) { .layout { grid-template-columns:1fr; } .sidebar { height:auto; position:static; } }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:2rem;"><img src="/brcprint.svg" alt="BRCPrint" style="height:36px;" /></div>
+    <div style="margin-bottom:2rem;padding:1rem;background:rgba(0,242,255,0.05);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:0.7rem;color:var(--accent);font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:0.5rem;">Cliente</div>
+      <div id="user-name" style="font-weight:800;font-size:1rem;">Carregando...</div>
+    </div>
+    <nav>
+      <a href="/minha-conta" class="nav-item">📦 Meus Orçamentos</a>
+      <a href="/minha-conta/cotacoes" class="nav-item">📋 Histórico</a>
+      <a href="/minha-conta/nova-cotacao" class="nav-item">➕ Nova Cotação</a>
+      <a href="/minha-conta/planos" class="nav-item active">💎 Planos B2B</a>
+      <a href="/minha-conta/perfil" class="nav-item">👤 Meu Perfil</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--border);">
+      <button id="logout-btn" style="width:100%;padding:0.75rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-weight:700;font-size:0.8rem;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:1px;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="margin-bottom:2rem;">
+      <h1 style="font-size:1.8rem;font-weight:900;margin:0;text-transform:uppercase;">Planos <span style="color:var(--accent);">B2B</span></h1>
+      <p style="color:var(--muted);margin:0.5rem 0 0;font-size:0.9rem;">Assine um plano e ganhe horas de impressão e desconto em todos os pedidos.</p>
+    </div>
+
+    <!-- Current plan -->
+    <div id="current-plan" style="display:none;margin-bottom:2rem;padding:1.25rem 1.5rem;background:rgba(0,255,148,0.05);border:1px solid rgba(0,255,148,0.2);border-radius:4px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--neon-green);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Plano Atual</div>
+          <div id="current-plan-name" style="font-size:1.1rem;font-weight:900;margin-top:0.25rem;"></div>
+        </div>
+        <div id="current-plan-balances" style="text-align:right;font-size:0.85rem;color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- Plans grid -->
+    <div id="plans-loading" style="padding:3rem;text-align:center;color:var(--muted);">Carregando planos...</div>
+    <div id="plans-grid" style="display:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;"></div>
+  </main>
+</div>
+
+<script is:inline>
+(function() {
+  function tok() { return localStorage.getItem('brc_token') || ''; }
+  function hdrs() { return { 'Authorization':'Bearer '+tok() }; }
+  function fmt(v) { return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+  function renderPlans(plans, client) {
+    document.getElementById('plans-loading').style.display='none';
+    var grid = document.getElementById('plans-grid');
+    grid.style.display = 'grid';
+    if (!plans.length) { grid.innerHTML='<p style="color:var(--muted);">Nenhum plano disponível no momento.</p>'; return; }
+    grid.innerHTML = plans.map(function(p) {
+      var isCurrent = client && client.subscription_plan_id === p.id;
+      return '<div class="plan-card'+(isCurrent?' featured':'')+'">'
+        +'<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);">' + (isCurrent ? '✅ SEU PLANO' : '💎 PLANO B2B') + '</div>'
+        +'<div style="font-size:1.2rem;font-weight:900;margin:0.5rem 0;">' + p.name + '</div>'
+        +'<div class="plan-price">' + fmt(p.price_monthly) + '<span style="font-size:1rem;font-weight:400;color:var(--muted);">/mês</span></div>'
+        +'<div style="margin-bottom:1rem;">'
+          +'<div class="feature-item"><span>🕐</span><span>' + (p.included_hours||0) + 'h de impressão/mês</span></div>'
+          +'<div class="feature-item"><span>⚖️</span><span>' + (p.included_grams||0) + 'g de filamento/mês</span></div>'
+          +'<div class="feature-item"><span>💰</span><span>' + (p.discount_percent||0) + '% de desconto em todos pedidos</span></div>'
+          +(p.description ? '<div class="feature-item"><span>ℹ️</span><span style="color:var(--muted);font-size:0.85rem;">' + p.description + '</span></div>' : '')
+        +'</div>'
+        +(isCurrent
+          ? '<div style="padding:0.75rem;background:rgba(0,255,148,0.08);border:1px solid rgba(0,255,148,0.2);border-radius:4px;text-align:center;font-size:0.8rem;font-weight:700;color:var(--neon-green);">ATIVO</div>'
+          : '<button class="btn-cyber" onclick="subscribePlan('+p.id+')">Assinar Plano</button>'
+        )
+        +'</div>';
+    }).join('');
+  }
+
+  window.subscribePlan = function(planId) {
+    var h = hdrs();
+    if (!tok()) { window.location.href='/minha-conta/login'; return; }
+    if (!confirm('Confirmar assinatura do plano?')) return;
+    fetch('/api/v1/subscription-plans/'+planId+'/subscribe', { method:'POST', headers:h })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.payment_url) { window.location.href = d.payment_url; }
+        else { alert('Solicitação enviada! Aguarde a confirmação.'); location.reload(); }
+      }).catch(function(){ alert('Erro ao solicitar plano. Tente novamente.'); });
+  };
+
+  function init() {
+    if (!tok()) { window.location.href='/minha-conta/login'; return; }
+    var h = hdrs();
+    Promise.all([
+      fetch('/api/v1/clients/me', {headers:h}).then(function(r){return r.ok?r.json():null;}),
+      fetch('/api/v1/subscription-plans/', {headers:h}).then(function(r){return r.ok?r.json():[];})
+    ]).then(function(results) {
+      var client = results[0], plans = results[1];
+      if (client) {
+        document.getElementById('user-name').textContent = client.name || client.email || '';
+        if (client.subscription_status === 'active') {
+          document.getElementById('current-plan').style.display='block';
+          document.getElementById('current-plan-name').textContent = client.plan_name || 'Plano Ativo';
+          document.getElementById('current-plan-balances').innerHTML =
+            (client.available_hours_balance||0).toFixed(1)+'h restantes<br>'+(client.available_grams_balance||0).toFixed(0)+'g restantes';
+        }
+      }
+      renderPlans(Array.isArray(plans)?plans:(plans.items||[]), client);
+    }).catch(function(e){ console.error(e); });
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    localStorage.removeItem('brc_token'); window.location.href='/';
+  });
+  init();
+})();
+</script>
+</Base>

@@ -1,0 +1,144 @@
+---
+import Base from '../../../layouts/Base.astro';
+---
+<Base title="Programa Afiliado — BRCPrint">
+<style>
+  :root { --accent:#00f2ff; --neon-green:#00ff94; --neon-purple:#bc13fe; --border:rgba(255,255,255,0.08); --muted:rgba(255,255,255,0.45); }
+  body { background:#05060a; color:#fff; font-family:'Inter',sans-serif; }
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .sidebar { background:rgba(10,12,18,0.95); border-right:1px solid var(--border); padding:2rem 1.5rem; position:sticky; top:0; height:100vh; }
+  .main { padding:2.5rem; }
+  .nav-item { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:4px; color:var(--muted); text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s; margin-bottom:0.25rem; }
+  .nav-item:hover,.nav-item.active { background:rgba(0,242,255,0.08); color:var(--accent); }
+  .stat-card { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; padding:1.5rem; }
+  .table-wrap { background:rgba(10,12,18,0.6); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  table { width:100%; border-collapse:collapse; }
+  th { background:rgba(0,242,255,0.05); padding:0.85rem 1.25rem; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); border-bottom:1px solid var(--border); }
+  td { padding:0.85rem 1.25rem; border-bottom:1px solid var(--border); font-size:0.85rem; }
+  tr:last-child td { border-bottom:none; }
+  .copy-btn { padding:0.3rem 0.75rem; background:rgba(0,242,255,0.08); border:1px solid rgba(0,242,255,0.2); color:var(--accent); font-size:0.7rem; font-weight:700; cursor:pointer; border-radius:2px; font-family:inherit; transition:all 0.2s; }
+  .copy-btn:hover { background:rgba(0,242,255,0.15); }
+  @media (max-width:768px) { .layout { grid-template-columns:1fr; } .sidebar { height:auto; position:static; } }
+</style>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div style="margin-bottom:2rem;"><img src="/brcprint.svg" alt="BRCPrint" style="height:36px;" /></div>
+    <div style="margin-bottom:2rem;padding:1rem;background:rgba(0,242,255,0.05);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:0.7rem;color:var(--accent);font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:0.5rem;">Cliente</div>
+      <div id="user-name" style="font-weight:800;font-size:1rem;">Carregando...</div>
+    </div>
+    <nav>
+      <a href="/minha-conta" class="nav-item">📦 Meus Orçamentos</a>
+      <a href="/minha-conta/cotacoes" class="nav-item">📋 Histórico</a>
+      <a href="/minha-conta/nova-cotacao" class="nav-item">➕ Nova Cotação</a>
+      <a href="/minha-conta/planos" class="nav-item">💎 Planos B2B</a>
+      <a href="/minha-conta/afiliado" class="nav-item active">🤝 Programa Afiliado</a>
+      <a href="/minha-conta/perfil" class="nav-item">👤 Meu Perfil</a>
+    </nav>
+    <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--border);">
+      <button id="logout-btn" style="width:100%;padding:0.75rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-weight:700;font-size:0.8rem;cursor:pointer;border-radius:2px;text-transform:uppercase;letter-spacing:1px;">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div style="margin-bottom:2rem;">
+      <h1 style="font-size:1.8rem;font-weight:900;margin:0;text-transform:uppercase;">Programa <span style="color:var(--accent);">Afiliado</span></h1>
+      <p style="color:var(--muted);margin:0.5rem 0 0;font-size:0.9rem;">Indique amigos e ganhe comissão em cada pedido realizado.</p>
+    </div>
+
+    <!-- Referral link -->
+    <div style="background:rgba(0,242,255,0.04);border:1px solid rgba(0,242,255,0.15);border-radius:4px;padding:1.5rem;margin-bottom:2rem;">
+      <div style="font-size:0.75rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.75rem;">🔗 Seu Link de Indicação</div>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <code id="ref-link" style="flex:1;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:4px;padding:0.75rem 1rem;font-family:monospace;font-size:0.9rem;color:#fff;word-break:break-all;">Carregando...</code>
+        <button class="copy-btn" onclick="copyLink()">📋 Copiar</button>
+      </div>
+      <p style="color:var(--muted);font-size:0.8rem;margin:0.75rem 0 0;">Compartilhe este link. Quando alguém realizar o primeiro pedido, você recebe comissão automática.</p>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1.5rem;margin-bottom:2rem;">
+      <div class="stat-card" style="border-top:3px solid var(--accent);">
+        <div style="font-size:0.7rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Indicações</div>
+        <div id="stat-referrals" style="font-size:2rem;font-weight:900;">—</div>
+      </div>
+      <div class="stat-card" style="border-top:3px solid var(--neon-green);">
+        <div style="font-size:0.7rem;color:var(--neon-green);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Ganhos Totais</div>
+        <div id="stat-earnings" style="font-size:2rem;font-weight:900;color:var(--neon-green);">—</div>
+      </div>
+      <div class="stat-card" style="border-top:3px solid var(--neon-purple);">
+        <div style="font-size:0.7rem;color:var(--neon-purple);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Saldo Disponível</div>
+        <div id="stat-balance" style="font-size:2rem;font-weight:900;color:var(--neon-purple);">—</div>
+      </div>
+    </div>
+
+    <!-- Referral history -->
+    <h2 style="font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin:0 0 1rem;">Histórico de Indicações</h2>
+    <div class="table-wrap">
+      <div id="ref-loading" style="padding:2rem;text-align:center;color:var(--muted);">Carregando...</div>
+      <div id="ref-empty" style="display:none;padding:2rem;text-align:center;color:var(--muted);">Nenhuma indicação ainda. Compartilhe seu link!</div>
+      <table id="ref-table" style="display:none;">
+        <thead><tr><th>Indicado</th><th>Data</th><th>Pedidos</th><th>Comissão</th><th>Status</th></tr></thead>
+        <tbody id="ref-tbody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script is:inline>
+(function() {
+  function tok() { return localStorage.getItem('brc_token') || ''; }
+  function hdrs() { return { 'Authorization':'Bearer '+tok() }; }
+  function fmt(v) { return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+  window.copyLink = function() {
+    var link = document.getElementById('ref-link').textContent;
+    navigator.clipboard.writeText(link).then(function(){ alert('Link copiado!'); });
+  };
+
+  function init() {
+    if (!tok()) { window.location.href='/minha-conta/login'; return; }
+    var h = hdrs();
+    fetch('/api/v1/clients/me', {headers:h}).then(function(r){
+      if (r.status===401) { localStorage.removeItem('brc_token'); window.location.href='/minha-conta/login'; return; }
+      if (!r.ok) return;
+      return r.json();
+    }).then(function(c) {
+      if (!c) return;
+      document.getElementById('user-name').textContent = c.name || c.email || '';
+      var code = c.referral_code || c.ref_code || '';
+      var link = code ? window.location.origin + '/ref/' + code : window.location.origin + '/?ref=' + (c.id||'');
+      document.getElementById('ref-link').textContent = link;
+    });
+
+    fetch('/api/v1/clients/my-referrals/', {headers:h}).then(function(r){return r.ok?r.json():null;}).then(function(d) {
+      document.getElementById('ref-loading').style.display='none';
+      if (!d) return;
+      var refs = Array.isArray(d) ? d : (d.referrals || []);
+      document.getElementById('stat-referrals').textContent = d.total_referrals || refs.length || 0;
+      document.getElementById('stat-earnings').textContent = fmt(d.total_earnings||0);
+      document.getElementById('stat-balance').textContent = fmt(d.available_balance||0);
+      if (!refs.length) { document.getElementById('ref-empty').style.display='block'; return; }
+      document.getElementById('ref-table').style.display='table';
+      document.getElementById('ref-tbody').innerHTML = refs.map(function(r) {
+        return '<tr>'
+          +'<td style="font-weight:700;">'+(r.name||r.email||'—')+'</td>'
+          +'<td style="color:var(--muted);">'+new Date(r.created_at).toLocaleDateString('pt-BR')+'</td>'
+          +'<td>'+(r.orders_count||0)+'</td>'
+          +'<td style="color:var(--neon-green);font-weight:700;">'+fmt(r.commission||0)+'</td>'
+          +'<td><span style="background:rgba(0,255,148,0.1);color:var(--neon-green);padding:0.2rem 0.6rem;border-radius:999px;font-size:0.7rem;font-weight:700;">'+(r.status||'ativo')+'</span></td>'
+          +'</tr>';
+      }).join('');
+    }).catch(function(){
+      document.getElementById('ref-loading').textContent='Nenhum dado de afiliado encontrado.';
+    });
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    localStorage.removeItem('brc_token'); window.location.href='/';
+  });
+  init();
+})();
+</script>
+</Base>
